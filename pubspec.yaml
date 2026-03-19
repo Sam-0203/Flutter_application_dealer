@@ -1,0 +1,38 @@
+name: dealershub_
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  google_fonts: ^6.3.2
+  smooth_page_indicator: ^1.2.1
+  datepicker_dropdown: ^1.0.1
+  textfield_tags: ^3.0.1
+  keyboard_actions: ^4.2.1
+  image_picker: ^1.2.1
+  http: ^1.6.0
+  provider: ^6.1.5+1
+  flutter_secure_storage: ^10.0.0
+  shared_preferences: ^2.5.3
+  flutter_image_compress: ^2.4.0
+  sms_autofill: ^2.4.1
+  share_plus: ^10.0.0
+  path_provider: ^2.1.5
+  screenshot: ^2.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/on boarding screens/
+    - assets/placeholders/
