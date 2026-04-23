@@ -1,7 +1,7 @@
 import 'package:dealershub_/src/utils/responsive/responsive_helper.dart';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/utils/widgets/car_shimmer.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../utils/route/route.dart';
@@ -43,7 +43,10 @@ class _MyinvetoryState extends State<Myinvetory> {
       builder: (context, vm, _) {
         /// Loading
         if (vm.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: 5,
+            itemBuilder: (context, index) => const CarCardShimmer(),
+          );
         }
 
         // Error State
@@ -54,7 +57,7 @@ class _MyinvetoryState extends State<Myinvetory> {
               child: Text(
                 'Failed to load cars. Please check your internet connection and try again.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.mulish(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.black54,
@@ -70,18 +73,35 @@ class _MyinvetoryState extends State<Myinvetory> {
             height: MediaQuery.of(context).size.height * 0.7,
             width: double.infinity,
             child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    newCarEntryRoute,
-                    arguments: widget.role,
-                  );
-                },
-                child: Image.asset(
-                  'assets/placeholders/Add_cars.png',
-                  fit: BoxFit.contain,
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/placeholders/Add_cars.png',
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 30),
+                  Text(
+                    'List your cars, start sharing, and \nunlock new opportunities.',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 15),
+                  Text(
+                    'The more cars you list, the more \nyour network expands!',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           );

@@ -1,14 +1,37 @@
+import 'package:dealershub_/src/utils/app_costants.dart';
 import 'package:dealershub_/src/utils/route/route.dart';
 import 'package:flutter/material.dart';
 
 class UserRole extends StatelessWidget {
   final String authType;
-  const UserRole({super.key, required this.authType});
+  const UserRole({
+    super.key,
+    required this.authType,
+    required String appbar_hide,
+  });
 
   @override
   Widget build(BuildContext context) {
     print('Auth Type Received: $authType');
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.arrow_back_ios_new,
+                size: 18,
+                color: Colors.black,
+              ),
+              Text('Back', style: TextViews.Backbutton1.style),
+            ],
+          ),
+        ),
+      ),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
@@ -37,7 +60,7 @@ class UserRole extends StatelessWidget {
                     // Handle selection here
                     print('Selected Dealer: $roleType');
                     if (authType == 'register') {
-                      Navigator.pushReplacementNamed(
+                      Navigator.pushNamed(
                         context,
                         NewUserSignup, // or whatever your route constant is named
                         arguments: {
@@ -46,7 +69,7 @@ class UserRole extends StatelessWidget {
                         }, //pass the String as arguments
                       );
                     } else {
-                      Navigator.pushReplacementNamed(
+                      Navigator.pushNamed(
                         context,
                         userLogin, // or whatever your route constant is named
                         arguments: {'authType': authType, 'roleType': roleType},
@@ -69,7 +92,7 @@ class UserRole extends StatelessWidget {
                     print('Selected Agent: $roleType');
 
                     if (authType == 'register') {
-                      Navigator.pushReplacementNamed(
+                      Navigator.pushNamed(
                         context,
                         NewUserSignup, // or whatever your route constant is named
                         arguments: {
@@ -78,7 +101,7 @@ class UserRole extends StatelessWidget {
                         }, //pass the String as arguments
                       );
                     } else {
-                      Navigator.pushReplacementNamed(
+                      Navigator.pushNamed(
                         context,
                         userLogin, // or whatever your route constant is named
                         arguments: {'authType': authType, 'roleType': roleType},

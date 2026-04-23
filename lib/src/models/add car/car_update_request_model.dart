@@ -28,6 +28,7 @@ class CarUpdateRequestModel {
   final List<int>? infotainmentFeatureIds;
   final List<int>? interiorFeatureIds;
   final List<int>? exteriorFeatureIds;
+  final String? status;
 
   CarUpdateRequestModel({
     this.carId,
@@ -47,7 +48,13 @@ class CarUpdateRequestModel {
     this.infotainmentFeatureIds,
     this.interiorFeatureIds,
     this.exteriorFeatureIds,
-  });
+    String? status,
+  }) : status = status == null ? null : _normalizeStatus(status);
+
+  static String _normalizeStatus(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'active' ? 'active' : 'inactive';
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -71,6 +78,7 @@ class CarUpdateRequestModel {
         "interior_feature_ids": interiorFeatureIds,
       if (exteriorFeatureIds != null)
         "exterior_feature_ids": exteriorFeatureIds,
+      if (status != null) "status": status,
     };
   }
 

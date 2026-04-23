@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:dealershub_/src/models/add%20car/PostCarRequestModel.dart';
-import 'package:dealershub_/src/models/add%20car/agent_fav_model.dart';
+import 'package:dealershub_/src/models/add%20car/agent_fav_model.dart'
+    as agent_fav;
 import 'package:dealershub_/src/models/add%20car/agent_remove_fav_model.dart';
-import 'package:dealershub_/src/models/add%20car/car_details_model.dart';
+import 'package:dealershub_/src/models/add%20car/car_details_model.dart'
+    as car_details;
 import 'package:dealershub_/src/models/add%20car/car_fav_dealer_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_remove_fav_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_update_request_model.dart';
@@ -132,13 +134,13 @@ class PostCarService {
     debugPrint('📤 REQUEST FIELDS:');
     request.fields.forEach((key, value) {
       debugPrint(
-        '  $key: ${value.length > 100 ? value.substring(0, 100) + '...' : value}',
+        '  $key: ${value.length > 100 ? '${value.substring(0, 100)}...' : value}',
       );
     });
     debugPrint('📤 REQUEST FILES: ${request.files.length} files');
-    request.files.forEach((file) {
+    for (var file in request.files) {
       debugPrint('  - ${file.field}: ${file.filename} (${file.contentType})');
-    });
+    }
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
@@ -183,7 +185,7 @@ class CarDetailsService {
 
 // For Car Details based on the car id : ====>
 class SingleCarDetailsService {
-  Future<CarDetailsResponse> fetchCarDetails(int carId) async {
+  Future<car_details.CarDetailsResponse> fetchCarDetails(int carId) async {
     final token = await SecureStorage.getToken(); // TOKEN getting
     final uri = Uri.parse('${ApiUrls.carDetails}$carId');
 
@@ -211,7 +213,7 @@ class SingleCarDetailsService {
       debugPrint('📥 Response Body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final parsed = carDetailsResponseFromJson(response.body);
+        final parsed = car_details.carDetailsResponseFromJson(response.body);
         debugPrint('✅ Successfully parsed car details');
         return parsed;
       } else if (response.statusCode == 401) {
@@ -426,6 +428,7 @@ class UpdateCarFeaturesService {
     debugPrint(
       '📤 Update Request - Exterior Features: ${model.exteriorFeatureIds}',
     );
+    debugPrint('📤 Update Request - Status: ${model.status}');
 
     // Use MultipartRequest for proper form-data handling with arrays
     var request = http.MultipartRequest('PUT', uri);
@@ -435,38 +438,64 @@ class UpdateCarFeaturesService {
       'Authorization': 'Bearer $token',
     });
 
-    // Add car_id
+    // Add required and optional fields
     request.fields['car_id'] = model.carId.toString();
 
-    // Add feature IDs as array fields
+    if (model.brandId != null) {
+      request.fields['brand_id'] = model.brandId.toString();
+    }
+    if (model.modelId != null) {
+      request.fields['model_id'] = model.modelId.toString();
+    }
+    if (model.variantId != null) {
+      request.fields['variant_id'] = model.variantId.toString();
+    }
+    if (model.fuelTypeId != null) {
+      request.fields['fuel_type_id'] = model.fuelTypeId.toString();
+    }
+    if (model.transmissionId != null) {
+      request.fields['transmission_id'] = model.transmissionId.toString();
+    }
+    if (model.colorId != null) {
+      request.fields['color_id'] = model.colorId.toString();
+    }
+    if (model.ownerTypeId != null) {
+      request.fields['owner_type_id'] = model.ownerTypeId.toString();
+    }
+    if (model.rtoId != null) request.fields['rto_id'] = model.rtoId.toString();
+    if (model.manufacturingYear != null) {
+      request.fields['manufacturing_year'] = model.manufacturingYear!;
+    }
+    if (model.kmRange != null) request.fields['km_range'] = model.kmRange!;
+    if (model.status != null) request.fields['status'] = model.status!;
+
+    // Add feature IDs as array fields with API expected keys
     if (model.safetyFeatureIds != null && model.safetyFeatureIds!.isNotEmpty) {
-      for (int id in model.safetyFeatureIds!) {
-        request.fields['safety_feature_ids[]'] = id.toString();
-      }
+      request.fields['safety_feature_ids'] = jsonEncode(model.safetyFeatureIds);
     }
     if (model.comfortFeatureIds != null &&
         model.comfortFeatureIds!.isNotEmpty) {
-      for (int id in model.comfortFeatureIds!) {
-        request.fields['comfort_feature_ids[]'] = id.toString();
-      }
+      request.fields['comfort_feature_ids'] = jsonEncode(
+        model.comfortFeatureIds,
+      );
     }
     if (model.infotainmentFeatureIds != null &&
         model.infotainmentFeatureIds!.isNotEmpty) {
-      for (int id in model.infotainmentFeatureIds!) {
-        request.fields['infotainment_feature_ids[]'] = id.toString();
-      }
+      request.fields['infotainment_feature_ids'] = jsonEncode(
+        model.infotainmentFeatureIds,
+      );
     }
     if (model.interiorFeatureIds != null &&
         model.interiorFeatureIds!.isNotEmpty) {
-      for (int id in model.interiorFeatureIds!) {
-        request.fields['interior_feature_ids[]'] = id.toString();
-      }
+      request.fields['interior_feature_ids'] = jsonEncode(
+        model.interiorFeatureIds,
+      );
     }
     if (model.exteriorFeatureIds != null &&
         model.exteriorFeatureIds!.isNotEmpty) {
-      for (int id in model.exteriorFeatureIds!) {
-        request.fields['exterior_feature_ids[]'] = id.toString();
-      }
+      request.fields['exterior_feature_ids'] = jsonEncode(
+        model.exteriorFeatureIds,
+      );
     }
 
     // Add other_details if it exists
@@ -494,16 +523,24 @@ class UpdateCarFeaturesService {
 
 // For updating car Images using PUT : ====>
 class UpdateCarImagesService {
-  Future<bool> addCarImages(int carId, List<String> imagePaths) async {
+  Future<List<car_details.CarImage>> addCarImages(
+    int carId,
+    List<String> imagePaths, {
+    bool isPrimary = false,
+  }) async {
     final token = await SecureStorage.getToken();
     final uri = Uri.parse(ApiUrls.carAddImagesAfterUpdate);
+
+    debugPrint('🚀 POST image upload URL: $uri');
+    debugPrint('🚀 image paths: $imagePaths');
 
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll({
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       })
-      ..fields['car_id'] = carId.toString();
+      ..fields['car_id'] = carId.toString()
+      ..fields['is_primary'] = isPrimary ? 'true' : 'false';
 
     for (int i = 0; i < imagePaths.length; i++) {
       request.files.add(
@@ -514,8 +551,20 @@ class UpdateCarImagesService {
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
+    debugPrint('🔍 Image upload response status: ${response.statusCode}');
+    debugPrint('🔍 Image upload response body: ${response.body}');
+
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return true;
+      final decoded = jsonDecode(response.body);
+      final data = decoded['data'];
+      if (data is List) {
+        return data
+            .map<car_details.CarImage>(
+              (item) => car_details.CarImage.fromJson(item),
+            )
+            .toList();
+      }
+      return [];
     } else {
       throw Exception('Failed to add images: ${response.body}');
     }
@@ -565,17 +614,53 @@ class DealerFavoriteCarsService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
+    debugPrint('Dealer favorites URL: $uri');
+    debugPrint('Dealer favorites status: ${response.statusCode}');
+    debugPrint('Dealer favorites body: ${response.body}');
+
     if (response.statusCode == 200) {
       return favoriteCarsResponseFromJson(response.body);
-    } else {
-      throw Exception('Failed to load favorite cars (${response.statusCode})');
+    }
+
+    final fallback = _emptyDealerFavoritesIfApplicable(response);
+    if (fallback != null) return fallback;
+
+    throw Exception(
+      'Failed to load favorite cars (${response.statusCode}) - ${response.body}',
+    );
+  }
+
+  FavoriteCarsResponse? _emptyDealerFavoritesIfApplicable(http.Response res) {
+    if (res.statusCode != 400 && res.statusCode != 404) return null;
+
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map<String, dynamic>) return null;
+
+      final message = (decoded['message'] ?? '').toString();
+      final normalized = message.toLowerCase();
+      final noFavorites =
+          normalized.contains('no favorite') ||
+          normalized.contains('no favourites') ||
+          normalized.contains('not found');
+
+      if (!noFavorites) return null;
+
+      return FavoriteCarsResponse(
+        message: message.isEmpty ? 'No favorite cars found' : message,
+        status: true,
+        statusCode: res.statusCode,
+        data: Data(count: 0, cars: const []),
+      );
+    } catch (_) {
+      return null;
     }
   }
 }
 
 // For fetching all favorite cars Agents : ====>
 class AgentFavoriteCarsService {
-  Future<AgentFavoriteCarsResponse> fetchAgentFavoriteCars() async {
+  Future<agent_fav.AgentFavoriteCarsResponse> fetchAgentFavoriteCars() async {
     final token = await SecureStorage.getToken();
     final uri = Uri.parse(ApiUrls.getAgentFavCar);
 
@@ -584,10 +669,48 @@ class AgentFavoriteCarsService {
       headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
     );
 
+    debugPrint('Agent favorites URL: $uri');
+    debugPrint('Agent favorites status: ${response.statusCode}');
+    debugPrint('Agent favorites body: ${response.body}');
+
     if (response.statusCode == 200) {
-      return agentFavoriteCarsResponseFromJson(response.body);
-    } else {
-      throw Exception('Failed to load favorite cars (${response.statusCode})');
+      return agent_fav.agentFavoriteCarsResponseFromJson(response.body);
+    }
+
+    final fallback = _emptyAgentFavoritesIfApplicable(response);
+    if (fallback != null) return fallback;
+
+    throw Exception(
+      'Failed to load favorite cars (${response.statusCode}) - ${response.body}',
+    );
+  }
+
+  agent_fav.AgentFavoriteCarsResponse? _emptyAgentFavoritesIfApplicable(
+    http.Response res,
+  ) {
+    if (res.statusCode != 400 && res.statusCode != 404) return null;
+
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map<String, dynamic>) return null;
+
+      final message = (decoded['message'] ?? '').toString();
+      final normalized = message.toLowerCase();
+      final noFavorites =
+          normalized.contains('no favorite') ||
+          normalized.contains('no favourites') ||
+          normalized.contains('not found');
+
+      if (!noFavorites) return null;
+
+      return agent_fav.AgentFavoriteCarsResponse(
+        message: message.isEmpty ? 'No favorite cars found' : message,
+        status: true,
+        statusCode: res.statusCode,
+        data: agent_fav.Data(count: 0, cars: const []),
+      );
+    } catch (_) {
+      return null;
     }
   }
 }
@@ -648,7 +771,7 @@ class RemoveCarFromFavService {
 
 // For adding a car to favorite using token and car_id Agents : ====>
 class AddToFavCarsAgent {
-  Future<AgentFavoriteCarsResponse> addToFavorite(int carId) async {
+  Future<agent_fav.AgentFavoriteCarsResponse> addToFavorite(int carId) async {
     final token = await SecureStorage.getToken();
 
     final uri = Uri.parse(ApiUrls.addToFavAgent);
@@ -663,8 +786,28 @@ class AddToFavCarsAgent {
     debugPrint('Add to Favorite Response Body: ${response.body}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      return AgentFavoriteCarsResponse.fromJson(data);
+      final decoded = jsonDecode(response.body);
+      final map = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+
+      try {
+        return agent_fav.AgentFavoriteCarsResponse.fromJson(map);
+      } catch (_) {
+        final dynamic statusRaw = map['status'];
+        final bool status = statusRaw is bool
+            ? statusRaw
+            : response.statusCode == 200 || response.statusCode == 201;
+
+        return agent_fav.AgentFavoriteCarsResponse(
+          message: (map['message'] ?? 'Added to favorites').toString(),
+          status: status,
+          statusCode: map['status_code'] is int
+              ? map['status_code'] as int
+              : response.statusCode,
+          data: agent_fav.Data(count: 0, cars: const []),
+        );
+      }
     } else {
       throw Exception(
         "Failed to add favorite - Status: ${response.statusCode}, Body: ${response.body}",

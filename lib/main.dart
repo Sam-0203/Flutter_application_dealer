@@ -1,20 +1,25 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+import 'dart:io';
+
 import 'package:dealershub_/src/utils/helper/install_checker.dart';
 import 'package:dealershub_/src/utils/route/route.dart';
 import 'package:dealershub_/src/utils/helper/secure_storage.dart';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
-import 'package:dealershub_/src/viewmodels/auth_view_model.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
+import 'package:dealershub_/src/viewmodels/user_viewmodel.dart';
 import 'package:dealershub_/src/viewmodels/language_viewmodel.dart';
 import 'package:dealershub_/src/viewmodels/state_cities_viemodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Full-screen app mode for Android.
-  await _applyAndroidFullScreen();
+  if (Platform.isAndroid) {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  }
 
   // ✅ Detect reinstall & clear secure storage
   await InstallChecker.handleFirstInstall();
@@ -74,6 +79,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => RemoveFromFavoriteViewModel(),
         ), // Dealer remove from fav
+        ChangeNotifierProvider(create: (_) => DealerProfileViewModel()),
+        ChangeNotifierProvider(create: (_) => AgentProfileViewModel()),
+        ChangeNotifierProvider(create: (_) => LogoutViewModel()),
       ],
       child: MainApp(
         initialRoute: initialRoute,
@@ -96,40 +104,14 @@ class MainApp extends StatefulWidget {
   State<MainApp> createState() => _MainAppState();
 }
 
-class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _applyAndroidFullScreen();
+// Global key for ScaffoldMessenger
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
-    SystemChrome.setSystemUIChangeCallback((systemOverlaysAreVisible) async {
-      if (systemOverlaysAreVisible) {
-        await Future.delayed(const Duration(milliseconds: 250));
-        await _applyAndroidFullScreen();
-      }
-    });
-  }
+// Global key for Navigator
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _applyAndroidFullScreen();
-    }
-  }
-
-  @override
-  void didChangeMetrics() {
-    if (_isKeyboardVisible) return;
-    Future.delayed(const Duration(milliseconds: 250), _applyAndroidFullScreen);
-  }
-
-  bool get _isKeyboardVisible {
-    final views = WidgetsBinding.instance.platformDispatcher.views;
-    if (views.isEmpty) return false;
-    return views.first.viewInsets.bottom > 0;
-  }
-
+class _MainAppState extends State<MainApp> {
   void _dismissKeyboardOnPointerDown(PointerDownEvent event) {
     final currentFocus = FocusManager.instance.primaryFocus;
     if (currentFocus == null) return;
@@ -147,10 +129,90 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     currentFocus.unfocus();
   }
 
+  //Internet connection check
+  bool isConnectedToInternet = false;
+  InternetStatus? _previousInternetStatus;
+  bool _isFirstStatusCheck = true;
+  late StreamSubscription<InternetStatus> _internetConnectionStreamSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _internetConnectionStreamSubscription = InternetConnection().onStatusChange
+        .listen((event) {
+          // Skip the first status check to avoid showing snackbar on app start
+          if (_isFirstStatusCheck) {
+            _isFirstStatusCheck = false;
+            _previousInternetStatus = event;
+            setState(() {
+              isConnectedToInternet = event == InternetStatus.connected;
+            });
+            return;
+          }
+
+          switch (event) {
+            case InternetStatus.connected:
+              debugPrint("✅ Internet Connected");
+
+              setState(() {
+                isConnectedToInternet = true;
+              });
+
+              // ✅ Refresh data only when reconnecting
+              if (_previousInternetStatus == InternetStatus.disconnected) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final context = scaffoldMessengerKey.currentContext;
+                  if (context != null) {
+                    context.read<ListOfCarsViewModel>().fetchingListOfCars();
+                    context.read<MyInventrySearchViewModel>().search('');
+                  }
+                });
+              }
+
+              break;
+
+            case InternetStatus.disconnected:
+              debugPrint("❌ Internet Disconnected");
+
+              setState(() {
+                isConnectedToInternet = false;
+              });
+
+              // ❌ Show error snackbar only when disconnecting
+              if (_previousInternetStatus == InternetStatus.connected) {
+                scaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.white, size: 30),
+                        SizedBox(width: 5),
+                        Text(
+                          "No Internet Connection",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+
+              break;
+          }
+
+          // Update previous status
+          _previousInternetStatus = event;
+        });
+  }
+
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    SystemChrome.setSystemUIChangeCallback(null);
+    _internetConnectionStreamSubscription.cancel();
     super.dispose();
   }
 
@@ -159,6 +221,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Dealers Hub',
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      navigatorKey: navigatorKey,
       builder: (context, child) {
         return PopScope(
           canPop: false,
@@ -170,6 +234,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         );
       },
       theme: ThemeData(
+        fontFamily: GoogleFonts.mulish().fontFamily,
+        textTheme: GoogleFonts.mulishTextTheme(),
+        primaryTextTheme: GoogleFonts.mulishTextTheme(),
         scaffoldBackgroundColor: const Color.fromRGBO(239, 239, 239, 1),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
@@ -194,9 +261,4 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       },
     );
   }
-}
-
-Future<void> _applyAndroidFullScreen() async {
-  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 }

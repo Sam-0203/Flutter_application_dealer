@@ -1,11 +1,13 @@
 import 'package:dealershub_/src/models/add%20car/PostCarRequestModel.dart';
-import 'package:dealershub_/src/models/add%20car/agent_fav_model.dart';
+import 'package:dealershub_/src/models/add%20car/agent_fav_model.dart'
+    hide CarImage;
 import 'package:dealershub_/src/models/add%20car/all_carModel_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_RTO_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_color_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_company_model.dart';
 import 'package:dealershub_/src/models/add car/car_models_model.dart';
-import 'package:dealershub_/src/models/add%20car/car_details_model.dart';
+import 'package:dealershub_/src/models/add%20car/car_details_model.dart'
+    as car_details;
 import 'package:dealershub_/src/models/add%20car/car_exterior_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_fav_dealer_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_infotainment_model.dart';
@@ -16,13 +18,15 @@ import 'package:dealershub_/src/models/add%20car/car_update_response_model.dart'
 import 'package:dealershub_/src/models/add%20car/car_varients_model.dart';
 import 'package:dealershub_/src/models/add%20car/comfort_model.dart';
 import 'package:dealershub_/src/models/add%20car/fuel_type_model.dart';
-import 'package:dealershub_/src/models/add%20car/list_of_car_details_model.dart';
+import 'package:dealershub_/src/models/add%20car/list_of_car_details_model.dart'
+    hide CarImage;
 import 'package:dealershub_/src/models/add%20car/my_inventry_model.dart';
 import 'package:dealershub_/src/models/add%20car/my_inventry_search_model.dart';
 import 'package:dealershub_/src/models/add%20car/safety_model.dart';
 import 'package:dealershub_/src/models/add%20car/search_details_model.dart';
 import 'package:dealershub_/src/models/add%20car/transmission_model.dart';
 import 'package:dealershub_/src/services/add_car_services.dart';
+import 'package:dealershub_/src/utils/helper/error_message_helper.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
@@ -54,7 +58,7 @@ class CarCompaniesListView extends ChangeNotifier {
         error = 'Failed with status code: ${carCompaniesResponse.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -86,7 +90,7 @@ class CarModelsListView extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -168,7 +172,7 @@ class CarFueltypeListView extends ChangeNotifier {
         error = '';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -204,7 +208,7 @@ class CarTransmissiotypeListView extends ChangeNotifier {
         error = '';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -236,7 +240,7 @@ class CarModelsVarietsListView extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -277,7 +281,7 @@ class CarColorListView extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -315,7 +319,7 @@ class CarRRTOsListView extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -347,7 +351,7 @@ class CarNumofOwner extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -386,7 +390,7 @@ class CarSafetyFeaturesViewModel extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -424,7 +428,7 @@ class CarcomfortFeaturesViewModel extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -463,7 +467,7 @@ class CarInfotainmentFeaturesViewModel extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -502,7 +506,7 @@ class CarInteriorFeaturesViewModel extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -541,7 +545,7 @@ class CarExteriorFeaturesViewModel extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -567,7 +571,7 @@ class PostCarViewModel extends ChangeNotifier {
       debugPrint('Add a new car ResponseData : $responseData');
       return true;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = ErrorMessageHelper.userMessage(e);
       return false;
     } finally {
       isLoading = false;
@@ -607,7 +611,7 @@ class CarDetailsViewModel extends ChangeNotifier {
         error = response.message;
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -633,7 +637,7 @@ class SingleCarDetailsViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? error;
 
-  DealerCarDetailsDatum? singleCar;
+  car_details.DealerCarDetailsDatum? singleCar;
 
   Future<void> fetchedSingleCardetails(int carId) async {
     singleCar = null; // Clear old data
@@ -650,7 +654,7 @@ class SingleCarDetailsViewModel extends ChangeNotifier {
         error = response.message;
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -679,7 +683,7 @@ class DeleteCarViewModel extends ChangeNotifier {
         isDeleted = true;
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       isDeleted = false;
     } finally {
       isLoading = false;
@@ -713,7 +717,7 @@ class ListOfCarsViewModel extends ChangeNotifier {
         listOfCars = [];
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       listOfCars = [];
     } finally {
       isLoading = false;
@@ -751,14 +755,14 @@ class SearchViewModel extends ChangeNotifier {
     try {
       final response = await _service.searchCars(query);
 
-      if (response.status || response.data.isNotEmpty) {
-        cars = response.data;
+      if (response.status || response.data.items.isNotEmpty) {
+        cars = response.data.items;
       } else {
         error = response.message;
         cars = [];
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       cars = [];
     } finally {
       isLoading = false;
@@ -797,7 +801,7 @@ class MyInventrySearchViewModel extends ChangeNotifier {
         cars = [];
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       cars = [];
     } finally {
       isLoading = false;
@@ -830,7 +834,7 @@ class AllCarModelsViewModel extends ChangeNotifier {
         error = 'Status code: ${response.statusCode}';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -905,7 +909,7 @@ class CarUpdateViewModel extends ChangeNotifier {
         errorMessage = response.message;
       }
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = ErrorMessageHelper.userMessage(e);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -930,22 +934,31 @@ class CarImageUploadViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   bool isSuccess = false;
+  List<car_details.CarImage> uploadedImages = [];
 
   Future<void> uploadCarImages({
     required int carId,
     required List<String> imagePaths,
+    bool isPrimary = false,
   }) async {
     isLoading = true;
     errorMessage = null;
     isSuccess = false;
+    uploadedImages = [];
     notifyListeners();
 
     try {
-      final result = await _service.addCarImages(carId, imagePaths);
-      isSuccess = result;
+      final result = await _service.addCarImages(
+        carId,
+        imagePaths,
+        isPrimary: isPrimary,
+      );
+      uploadedImages = result;
+      isSuccess = result.isNotEmpty;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = ErrorMessageHelper.userMessage(e);
       isSuccess = false;
+      uploadedImages = [];
     } finally {
       isLoading = false;
       notifyListeners();
@@ -977,7 +990,7 @@ class DeleteCarImageViewModel extends ChangeNotifier {
 
       isSuccess = result;
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     }
 
     isLoading = false;
@@ -1009,11 +1022,24 @@ class DealerFavoriteCarsViewModel extends ChangeNotifier {
         favoriteCars = response.data.cars;
         debugPrint('Dealer Favorite Cars : ${response.data.cars.length}');
       } else {
-        error = response.message;
-        debugPrint('Error fetching favorite cars: $error');
+        final message = response.message.toLowerCase();
+        final noFavorites =
+            response.data.cars.isEmpty &&
+            (message.contains('no favorite') ||
+                message.contains('no favourites') ||
+                message.contains('not found'));
+
+        if (noFavorites) {
+          favoriteCars = [];
+          error = null;
+          debugPrint('Dealer favorites are empty.');
+        } else {
+          error = response.message;
+          debugPrint('Error fetching favorite cars: $error');
+        }
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       debugPrint('Exception fetching favorite cars: $error');
     } finally {
       isLoading = false;
@@ -1102,11 +1128,24 @@ class AgentFavoriteCarsViewModel extends ChangeNotifier {
         favoriteCars = response.data.cars;
         debugPrint('Agent Favorite Cars : ${response.data.cars.length}');
       } else {
-        error = response.message;
-        debugPrint('Error fetching favorite cars: $error');
+        final message = response.message.toLowerCase();
+        final noFavorites =
+            response.data.cars.isEmpty &&
+            (message.contains('no favorite') ||
+                message.contains('no favourites') ||
+                message.contains('not found'));
+
+        if (noFavorites) {
+          favoriteCars = [];
+          error = null;
+          debugPrint('Agent favorites are empty.');
+        } else {
+          error = response.message;
+          debugPrint('Error fetching favorite cars: $error');
+        }
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       debugPrint('Exception fetching favorite cars: $error');
     } finally {
       isLoading = false;
@@ -1121,10 +1160,12 @@ class AddFavCarsAgentsViewModel extends ChangeNotifier {
 
   bool isLoading = false;
   bool isFavorite = false;
+  String? errorMessage;
 
   Future<bool> addToFavorite(int carId) async {
     isLoading = true;
     isFavorite = false;
+    errorMessage = null;
     notifyListeners();
 
     try {
@@ -1134,7 +1175,10 @@ class AddFavCarsAgentsViewModel extends ChangeNotifier {
         isFavorite = true;
         return true;
       }
+
+      errorMessage = response.message;
     } catch (e) {
+      errorMessage = ErrorMessageHelper.userMessage(e);
       debugPrint("Add favorite error: $e");
     } finally {
       isLoading = false;

@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 
-import 'package:google_fonts/google_fonts.dart';
 import 'package:dealershub_/src/utils/colors.dart';
 import 'package:dealershub_/src/utils/route/route.dart';
 import 'package:dealershub_/src/utils/widgets/input_field.dart';
@@ -171,6 +171,13 @@ class CarDetails {
 }
 
 class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
+  static const int _maxCarImages = 10;
+
+  int get _remainingImageSlots {
+    final remaining = _maxCarImages - carImages.length;
+    return remaining > 0 ? remaining : 0;
+  }
+
   List<String> combinedListFor(List baseList) {
     return [...baseList.cast<String>(), ...currentOptionalData];
   }
@@ -369,7 +376,10 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
       "extra_exterior_features": _uniqueFeatureNames(extraExteriorFeatures),
 
       // IMAGES
-      "images": carImages.map((e) => e.path).toList(),
+      "images": carImages.take(_maxCarImages).map((e) => e.path).toList(),
+
+      // STATUS (default until user changes it on review screen)
+      "status": "inactive",
     };
   }
 
@@ -566,27 +576,63 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
     }
   }
 
+  /// Check if file is a valid image format
+  bool _isValidImageFile(String filePath) {
+    final validExtensions = [
+      'jpg',
+      'jpeg',
+      'png',
+      'webp',
+      'bmp',
+      'tiff',
+      'tif',
+      'heic',
+      'heif',
+    ];
+    final name = filePath.split('/').last;
+    final dotIndex = name.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == name.length - 1) {
+      // Picker sources are image-only; don't reject extension-less temp files.
+      return true;
+    }
+    final extension = name.substring(dotIndex + 1).toLowerCase();
+    return validExtensions.contains(extension);
+  }
+
   Future<File> _compressImage(File file) async {
     final filePath = file.absolute.path;
-    final extension = filePath.split('.').last.toLowerCase();
+    final name = filePath.split('/').last;
+    final dotIndex = name.lastIndexOf('.');
+    final extension = (dotIndex == -1 || dotIndex == name.length - 1)
+        ? ''
+        : name.substring(dotIndex + 1).toLowerCase();
 
     CompressFormat format;
+    String outputExtension;
 
     switch (extension) {
       case 'png':
         format = CompressFormat.png;
+        outputExtension = 'png';
         break;
       case 'webp':
         format = CompressFormat.webp;
+        outputExtension = 'webp';
         break;
       case 'jpg':
       case 'jpeg':
+      case 'bmp':
+      case 'tiff':
+      case 'tif':
+      case 'heic':
+      case 'heif':
       default:
         format = CompressFormat.jpeg;
+        outputExtension = 'jpg';
     }
 
     final targetPath =
-        "${file.parent.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.$extension";
+        "${file.parent.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.$outputExtension";
 
     final compressedFile = await FlutterImageCompress.compressAndGetFile(
       filePath,
@@ -679,18 +725,182 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
     });
   }
 
+  bool get _hasInputText => dataEnteringController.text.trim().isNotEmpty;
+
+  void _handleAddOptionalInput() {
+    FocusScope.of(context).unfocus();
+    final text = dataEnteringController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      stepOptionalData[currentStep]!.add(text);
+      stepSelectedIndexes[currentStep]!.add(
+        stepOptionalData[currentStep]!.length - 1,
+      );
+
+      switch (currentStep) {
+        case CarDetailsStep.safetyFeatures:
+          if (!customSafetyFeatures.contains(text)) {
+            customSafetyFeatures.add(text);
+          }
+          break;
+
+        case CarDetailsStep.comfortAndConvenience:
+          if (!customComfortFeatures.contains(text)) {
+            customComfortFeatures.add(text);
+          }
+          break;
+
+        case CarDetailsStep.informationAndConnectivity:
+          if (!customInfoFeatures.contains(text)) {
+            customInfoFeatures.add(text);
+          }
+          break;
+
+        case CarDetailsStep.interiorFeatures:
+          if (!customInteriorFeatures.contains(text)) {
+            customInteriorFeatures.add(text);
+          }
+          break;
+
+        case CarDetailsStep.exteriorFeatures:
+          if (!customExteriorFeatures.contains(text)) {
+            customExteriorFeatures.add(text);
+          }
+          break;
+
+        default:
+          break;
+      }
+
+      dataEnteringController.clear();
+    });
+  }
+
+  void _goToNextOptionalStep() {
+    if (currentStep == CarDetailsStep.otherDetails) {
+      final hasInsurance =
+          (carDetails.insurance ?? '').trim().isNotEmpty &&
+          selectedInsurance != null;
+      final hasServiceHistory =
+          (carDetails.serviceHistory ?? '').trim().isNotEmpty &&
+          selectedService != null;
+
+      if (!hasInsurance || !hasServiceHistory) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please select Insurance Validity and Service History',
+            ),
+            backgroundColor: Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+    }
+
+    final selected = currentSelectedIndexes
+        .map((i) => currentOptionalData[i])
+        .toList();
+    switch (currentStep) {
+      case CarDetailsStep.otherDetails:
+        break;
+      case CarDetailsStep.safetyFeatures:
+        carDetails = carDetails.copyWith(safetyFeatures: selected);
+        break;
+      case CarDetailsStep.comfortAndConvenience:
+        carDetails = carDetails.copyWith(comfortFeatures: selected);
+        break;
+      case CarDetailsStep.informationAndConnectivity:
+        carDetails = carDetails.copyWith(connectivityFeatures: selected);
+        break;
+      case CarDetailsStep.interiorFeatures:
+        carDetails = carDetails.copyWith(interiorFeatures: selected);
+        break;
+      case CarDetailsStep.exteriorFeatures:
+        carDetails = carDetails.copyWith(exteriorFeatures: selected);
+        break;
+      case CarDetailsStep.imageUploadFields:
+        break;
+    }
+    _advanceToNextStep();
+  }
+
+  void _advanceToNextStep() {
+    setState(() {
+      switch (currentStep) {
+        case CarDetailsStep.otherDetails:
+          currentStep = CarDetailsStep.safetyFeatures;
+          break;
+
+        case CarDetailsStep.safetyFeatures:
+          currentStep = CarDetailsStep.comfortAndConvenience;
+          break;
+
+        case CarDetailsStep.comfortAndConvenience:
+          currentStep = CarDetailsStep.informationAndConnectivity;
+          break;
+
+        case CarDetailsStep.informationAndConnectivity:
+          currentStep = CarDetailsStep.interiorFeatures;
+          break;
+
+        case CarDetailsStep.interiorFeatures:
+          currentStep = CarDetailsStep.exteriorFeatures;
+          break;
+
+        case CarDetailsStep.exteriorFeatures:
+          currentStep = CarDetailsStep.imageUploadFields;
+          break;
+
+        case CarDetailsStep.imageUploadFields:
+          break;
+      }
+    });
+  }
+
+  void _skipCurrentStep() {
+    FocusScope.of(context).unfocus();
+    _advanceToNextStep();
+  }
+
+  @override
+  void dispose() {
+    dataEnteringController.dispose();
+    super.dispose();
+  }
+
   bool isUploading = false;
+
+  void _showPickerError(ImageSource source, Object error) {
+    if (!mounted || !context.mounted) return;
+
+    final action = source == ImageSource.camera ? 'camera' : 'gallery';
+    String message = 'Could not open $action. Please try again.';
+
+    if (error is PlatformException) {
+      final raw = '${error.code} ${error.message ?? ''}'.toLowerCase();
+      if (raw.contains('denied') || raw.contains('permission')) {
+        message =
+            'Please allow ${source == ImageSource.camera ? 'Camera' : 'Photos'} permission in Android settings.';
+      } else if (raw.contains('activity') || raw.contains('cancel')) {
+        message = 'No image selected from $action.';
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xffF47B39),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('Get data from newcarentry : ${widget.carBasicData}');
-    debugPrint(
-      'Get data from newcarentry for Preview details : ${widget.carPreviewData}',
-    );
-
-    debugPrint(
-      '"insurance": ${carDetails.insurance}, "service_history": ${carDetails.serviceHistory}',
-    );
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -747,7 +957,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                           Icon(Icons.arrow_back_ios),
                           Text(
                             'Back',
-                            style: GoogleFonts.mulish(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: Colors.black,
@@ -756,29 +966,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                         ],
                       ),
               ),
-              isLastStep
-                  ? Row()
-                  : GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          currentStep = CarDetailsStep.imageUploadFields;
-                        });
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            'Skip',
-                            style: GoogleFonts.mulish(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                        ],
-                      ),
-                    ),
+              isLastStep ? Row() : const SizedBox.shrink(),
             ],
           ),
         ),
@@ -805,7 +993,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                         'Provide your car details and photos.\nPost your listing to reach potential buyers.', // Description text
                         maxLines: 2,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontWeight: FontWeight.w400,
                           fontSize: 16,
                           color: Color.fromRGBO(41, 68, 135, 1),
@@ -866,7 +1054,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
               //  Expanded Ends Here ---->
               SizedBox(height: 10),
 
-              isLastStep
+              (isLastStep || currentStep == CarDetailsStep.otherDetails)
                   ? Container()
                   : Padding(
                       padding: const EdgeInsets.only(
@@ -885,61 +1073,166 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              if (isFirstStep) {
-                                Navigator.pop(context);
-                              }
-                              setState(() {
-                                switch (currentStep) {
-                                  case CarDetailsStep.safetyFeatures:
-                                    currentStep = CarDetailsStep.otherDetails;
-                                    break;
-
-                                  case CarDetailsStep.comfortAndConvenience:
-                                    currentStep = CarDetailsStep.safetyFeatures;
-                                    break;
-
-                                  case CarDetailsStep
-                                      .informationAndConnectivity:
-                                    currentStep =
-                                        CarDetailsStep.comfortAndConvenience;
-                                    break;
-
-                                  case CarDetailsStep.interiorFeatures:
-                                    currentStep = CarDetailsStep
-                                        .informationAndConnectivity;
-                                    break;
-
-                                  case CarDetailsStep.exteriorFeatures:
-                                    currentStep =
-                                        CarDetailsStep.interiorFeatures;
-                                    break;
-
-                                  case CarDetailsStep.imageUploadFields:
-                                    currentStep =
-                                        CarDetailsStep.exteriorFeatures;
-                                    break;
-
-                                  case CarDetailsStep.otherDetails:
-                                    break;
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                if (isFirstStep) {
+                                  Navigator.pop(context);
                                 }
-                              });
-                            },
-                            child: Container(
-                              width: 170,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  width: 2,
-                                  color: ButtonsColors.GetStartedButton,
+                                setState(() {
+                                  switch (currentStep) {
+                                    case CarDetailsStep.safetyFeatures:
+                                      currentStep = CarDetailsStep.otherDetails;
+                                      break;
+
+                                    case CarDetailsStep.comfortAndConvenience:
+                                      currentStep =
+                                          CarDetailsStep.safetyFeatures;
+                                      break;
+
+                                    case CarDetailsStep
+                                        .informationAndConnectivity:
+                                      currentStep =
+                                          CarDetailsStep.comfortAndConvenience;
+                                      break;
+
+                                    case CarDetailsStep.interiorFeatures:
+                                      currentStep = CarDetailsStep
+                                          .informationAndConnectivity;
+                                      break;
+
+                                    case CarDetailsStep.exteriorFeatures:
+                                      currentStep =
+                                          CarDetailsStep.interiorFeatures;
+                                      break;
+
+                                    case CarDetailsStep.imageUploadFields:
+                                      currentStep =
+                                          CarDetailsStep.exteriorFeatures;
+                                      break;
+
+                                    case CarDetailsStep.otherDetails:
+                                      break;
+                                  }
+                                });
+                              },
+                              child: Container(
+                                width: 170,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    width: 2,
+                                    color: ButtonsColors.GetStartedButton,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                borderRadius: BorderRadius.circular(10),
+                                child: Center(
+                                  child: Text(
+                                    'Previous',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: ButtonsColors.GetStartedButton,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              child: Center(
+                            ),
+                          ),
+                          SizedBox(width: 5),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                if (carImages.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Please upload at least 1 or 2 car images',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      backgroundColor: Color(0xffF47B39),
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return; // ❌ STOP navigation
+                                }
+
+                                if (carImages.length > _maxCarImages) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Maximum 10 images allowed',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // ✅ PROCEED ONLY IF IMAGE EXISTS
+                                final previewData = buildPreviewData(context);
+                                carDetails = carDetails.copyWith(
+                                  images: carImages,
+                                );
+
+                                Navigator.pushNamed(
+                                  context,
+                                  carDetailsReview,
+                                  arguments: {
+                                    'carId':
+                                        0, // 0 for new car (not yet posted)
+                                    'showAppBar': false,
+                                    'showBottomButtons': true,
+                                    'carData': buildPostData(context),
+                                    'previewData': previewData,
+                                    'role': widget.role,
+                                    'headerTitle': true,
+                                  },
+                                );
+                              },
+                              child: Container(
+                                width: 170,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: ButtonsColors.GetStartedButton,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Next',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _skipCurrentStep,
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    width: 2,
+                                    color: ButtonsColors.GetStartedButton,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
                                 child: Text(
-                                  'Previous',
-                                  style: GoogleFonts.inter(
+                                  'Skip',
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                     color: ButtonsColors.GetStartedButton,
@@ -948,57 +1241,22 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                               ),
                             ),
                           ),
-
-                          GestureDetector(
-                            onTap: () {
-                              if (carImages.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Please upload at least 1 or 2 car images',
-                                      style: GoogleFonts.mulish(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    backgroundColor: Color(0xffF47B39),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                                return; // ❌ STOP navigation
-                              }
-
-                              // ✅ PROCEED ONLY IF IMAGE EXISTS
-                              final previewData = buildPreviewData(context);
-                              carDetails = carDetails.copyWith(
-                                images: carImages,
-                              );
-
-                              Navigator.pushNamed(
-                                context,
-                                carDetailsReview,
-                                arguments: {
-                                  'carId': 0, // 0 for new car (not yet posted)
-                                  'showAppBar': false,
-                                  'showBottomButtons': true,
-                                  'carData': buildPostData(context),
-                                  'previewData': previewData,
-                                  'role': widget.role,
-                                  'headerTitle': true,
-                                },
-                              );
-                            },
-                            child: Container(
-                              width: 170,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: ButtonsColors.GetStartedButton,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Center(
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _hasInputText
+                                  ? _handleAddOptionalInput
+                                  : _goToNextOptionalStep,
+                              child: Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: ButtonsColors.GetStartedButton,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                alignment: Alignment.center,
                                 child: Text(
-                                  'Next',
-                                  style: GoogleFonts.inter(
+                                  _hasInputText ? 'Add Your Feature' : 'Next',
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -1008,93 +1266,6 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                             ),
                           ),
                         ],
-                      )
-                    : GestureDetector(
-                        onTap: () {
-                          final selected = currentSelectedIndexes
-                              .map((i) => currentOptionalData[i])
-                              .toList();
-                          switch (currentStep) {
-                            case CarDetailsStep.otherDetails:
-                              break;
-                            case CarDetailsStep.safetyFeatures:
-                              carDetails = carDetails.copyWith(
-                                safetyFeatures: selected,
-                              );
-                              break;
-                            case CarDetailsStep.comfortAndConvenience:
-                              carDetails = carDetails.copyWith(
-                                comfortFeatures: selected,
-                              );
-                              break;
-                            case CarDetailsStep.informationAndConnectivity:
-                              carDetails = carDetails.copyWith(
-                                connectivityFeatures: selected,
-                              );
-                              break;
-                            case CarDetailsStep.interiorFeatures:
-                              carDetails = carDetails.copyWith(
-                                interiorFeatures: selected,
-                              );
-                              break;
-                            case CarDetailsStep.exteriorFeatures:
-                              carDetails = carDetails.copyWith(
-                                exteriorFeatures: selected,
-                              );
-                              break;
-                            case CarDetailsStep.imageUploadFields:
-                              break;
-                          }
-                          setState(() {
-                            switch (currentStep) {
-                              case CarDetailsStep.otherDetails:
-                                currentStep = CarDetailsStep.safetyFeatures;
-                                break;
-
-                              case CarDetailsStep.safetyFeatures:
-                                currentStep =
-                                    CarDetailsStep.comfortAndConvenience;
-                                break;
-
-                              case CarDetailsStep.comfortAndConvenience:
-                                currentStep =
-                                    CarDetailsStep.informationAndConnectivity;
-                                break;
-
-                              case CarDetailsStep.informationAndConnectivity:
-                                currentStep = CarDetailsStep.interiorFeatures;
-                                break;
-
-                              case CarDetailsStep.interiorFeatures:
-                                currentStep = CarDetailsStep.exteriorFeatures;
-                                break;
-
-                              case CarDetailsStep.exteriorFeatures:
-                                currentStep = CarDetailsStep.imageUploadFields;
-                                break;
-
-                              case CarDetailsStep.imageUploadFields:
-                                break;
-                            }
-                          });
-                        },
-                        child: Container(
-                          height: 50,
-                          width: MediaQuery.of(context).size.width,
-                          decoration: BoxDecoration(
-                            color: ButtonsColors.GetStartedButton,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Next',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
                       ),
               ),
             ],
@@ -1142,14 +1313,14 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                       selectedInsurance == null
                           ? Text(
                               "Insurance Validity",
-                              style: GoogleFonts.mulish(
+                              style: TextStyle(
                                 fontSize: 16,
                                 color: Color.fromRGBO(59, 59, 59, 1),
                               ),
                             )
                           : RichText(
                               text: TextSpan(
-                                style: GoogleFonts.mulish(
+                                style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.black,
                                 ),
@@ -1210,7 +1381,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                   return ChoiceChip(
                     label: Text(
                       currentOptionalData[index],
-                      style: GoogleFonts.mulish(
+                      style: TextStyle(
                         fontSize: 13,
                         color: isSelected ? Colors.white : Colors.black,
                         fontWeight: isSelected
@@ -1268,74 +1439,18 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: TextField(
                   controller: dataEnteringController,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) {
+                    if (_hasInputText) {
+                      _handleAddOptionalInput();
+                    }
+                  },
                   maxLines: 1,
                   decoration: InputDecoration(
                     hintText: CarOptinalDetails.generalHintText,
                     border: InputBorder.none,
                   ),
                 ),
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.only(left: 8),
-              height: 46,
-              width: 46,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF7A2E),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                splashRadius: 22,
-                icon: const Icon(Icons.add, color: Colors.white),
-                onPressed: () {
-                  FocusScope.of(context).unfocus();
-                  final text = dataEnteringController.text.trim();
-                  if (text.isEmpty) return;
-
-                  setState(() {
-                    stepOptionalData[currentStep]!.add(text);
-                    stepSelectedIndexes[currentStep]!.add(
-                      stepOptionalData[currentStep]!.length - 1,
-                    );
-
-                    switch (currentStep) {
-                      case CarDetailsStep.safetyFeatures:
-                        if (!customSafetyFeatures.contains(text)) {
-                          customSafetyFeatures.add(text);
-                        }
-                        break;
-
-                      case CarDetailsStep.comfortAndConvenience:
-                        if (!customComfortFeatures.contains(text)) {
-                          customComfortFeatures.add(text);
-                        }
-                        break;
-
-                      case CarDetailsStep.informationAndConnectivity:
-                        if (!customInfoFeatures.contains(text)) {
-                          customInfoFeatures.add(text);
-                        }
-                        break;
-
-                      case CarDetailsStep.interiorFeatures:
-                        if (!customInteriorFeatures.contains(text)) {
-                          customInteriorFeatures.add(text);
-                        }
-                        break;
-
-                      case CarDetailsStep.exteriorFeatures:
-                        if (!customExteriorFeatures.contains(text)) {
-                          customExteriorFeatures.add(text);
-                        }
-                        break;
-
-                      default:
-                        break;
-                    }
-
-                    dataEnteringController.clear();
-                  });
-                },
               ),
             ),
           ],
@@ -1394,7 +1509,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                       return ChoiceChip(
                         label: Text(
                           label,
-                          style: GoogleFonts.mulish(
+                          style: TextStyle(
                             fontSize: 13,
                             color: isSelected ? Colors.white : Colors.black,
                             fontWeight: isSelected
@@ -1492,7 +1607,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                       return ChoiceChip(
                         label: Text(
                           label,
-                          style: GoogleFonts.mulish(
+                          style: TextStyle(
                             fontSize: 13,
                             color: isSelected ? Colors.white : Colors.black,
                             fontWeight: isSelected
@@ -1592,7 +1707,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                       return ChoiceChip(
                         label: Text(
                           label,
-                          style: GoogleFonts.mulish(
+                          style: TextStyle(
                             fontSize: 13,
                             color: isSelected ? Colors.white : Colors.black,
                             fontWeight: isSelected
@@ -1691,7 +1806,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                       return ChoiceChip(
                         label: Text(
                           label,
-                          style: GoogleFonts.mulish(
+                          style: TextStyle(
                             fontSize: 13,
                             color: isSelected ? Colors.white : Colors.black,
                             fontWeight: isSelected
@@ -1790,7 +1905,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                       return ChoiceChip(
                         label: Text(
                           label,
-                          style: GoogleFonts.mulish(
+                          style: TextStyle(
                             fontSize: 13,
                             color: isSelected ? Colors.white : Colors.black,
                             fontWeight: isSelected
@@ -1851,8 +1966,8 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  'Car Photos (${carImages.length}/10)',
-                  style: GoogleFonts.mulish(
+                  'Car Photos (${carImages.length}/$_maxCarImages)',
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                     color: const Color.fromRGBO(41, 68, 135, 1),
@@ -1876,7 +1991,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                           crossAxisSpacing: 5,
                           mainAxisSpacing: 5,
                         ),
-                    itemCount: 10,
+                    itemCount: _maxCarImages,
                     itemBuilder: (context, index) {
                       final hasImage = index < carImages.length;
 
@@ -1926,6 +2041,18 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
   }
 
   void _showBottomSheet(BuildContext context) {
+    if (_remainingImageSlots <= 0) {
+      if (mounted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 10 images allowed'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color.fromRGBO(218, 218, 218, 1),
@@ -1948,7 +2075,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                     child: Center(
                       child: Text(
                         'Take Photo',
-                        style: GoogleFonts.mulish(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1969,7 +2096,7 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                     child: Center(
                       child: Text(
                         'Choose from Gallery',
-                        style: GoogleFonts.mulish(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
@@ -2117,7 +2244,18 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    if (carImages.length >= 10) return;
+    final slotsBeforePick = _remainingImageSlots;
+    if (slotsBeforePick <= 0) {
+      if (mounted && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 10 images allowed'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() {
       isUploading = true;
@@ -2128,15 +2266,71 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
       if (source == ImageSource.gallery) {
         final List<XFile> pickedFiles = await _picker.pickMultiImage();
 
+        if (pickedFiles.isEmpty) return;
+
+        List<String> invalidFiles = [];
+        int skippedByLimit = 0;
+        int validCount = 0;
+
         for (final file in pickedFiles) {
-          if (carImages.length >= 10) break;
+          if (validCount >= slotsBeforePick) {
+            skippedByLimit++;
+            continue;
+          }
+
+          if (file.path.isEmpty) {
+            invalidFiles.add('unknown');
+            continue;
+          }
+
+          final fileName = file.path.split('/').last;
+
+          // ✅ Validate file type is an image
+          if (!_isValidImageFile(file.path)) {
+            invalidFiles.add(fileName);
+            continue;
+          }
 
           final originalFile = File(file.path);
+          if (!await originalFile.exists()) {
+            invalidFiles.add(fileName);
+            continue;
+          }
 
-          final compressed = await _compressImage(originalFile);
-
-          carImages.add(compressed);
+          try {
+            final compressed = await _compressImage(originalFile);
+            carImages.add(compressed);
+            validCount++;
+          } catch (e) {
+            invalidFiles.add(fileName);
+          }
         }
+
+        if (skippedByLimit > 0 && mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Only $validCount image(s) added. Maximum $_maxCarImages images allowed.',
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+
+        // Show error if any invalid files were attempted
+        if (invalidFiles.isNotEmpty && mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ Skipped ${invalidFiles.length} file(s). Only JPG, PNG, WebP, BMP, TIFF allowed.\n'
+                'HEIC/HEIF are also supported. No GIF, videos, or other formats.',
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+
+        setState(() {});
       }
 
       /// 📸 CAMERA (SINGLE IMAGE)
@@ -2146,19 +2340,40 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
         );
 
         if (pickedFile != null) {
+          // ✅ Validate camera photo is valid image
+          if (!_isValidImageFile(pickedFile.path)) {
+            if (mounted && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('❌ Invalid file format. Only images allowed.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+            return;
+          }
+
           final originalFile = File(pickedFile.path);
-
           final compressed = await _compressImage(originalFile);
-
           carImages.add(compressed);
+
+          setState(() {});
         }
       }
-
-      setState(() {});
+    } on PlatformException catch (e) {
+      _showPickerError(source, e);
+    } on MissingPluginException catch (e) {
+      // better platform support diagnostics
+      _showPickerError(source, e);
+    } catch (e, stackTrace) {
+      debugPrint('Image pick failed: $e\n$stackTrace');
+      _showPickerError(source, e);
     } finally {
-      setState(() {
-        isUploading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isUploading = false;
+        });
+      }
     }
   }
 

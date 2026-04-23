@@ -80,28 +80,32 @@ class MyInventrySearchDatum {
     required this.isFavorite,
   });
 
-  factory MyInventrySearchDatum.fromJson(Map<String, dynamic> json) =>
-      MyInventrySearchDatum(
-        dealer: Dealer.fromJson(_asMap(json["dealer"])),
-        id: _asInt(json["id"]),
-        status: _asString(json["status"]),
-        brand: Brand.fromJson(_asMap(json["brand"])),
-        model: Brand.fromJson(_asMap(json["model"])),
-        variant: Brand.fromJson(_asMap(json["variant"])),
-        color: Color.fromJson(_asMap(json["color"])),
-        fuelType: FuelType.fromJson(_asMap(json["fuel_type"])),
-        transmission: Brand.fromJson(_asMap(json["transmission"])),
-        manufacturingYear: _asString(json["manufacturing_year"]),
-        kmRange: _asString(json["km_range"]),
-        ownerType: Brand.fromJson(_asMap(json["owner_type"])),
-        rto: Rto.fromJson(_asMap(json["rto"])),
-        otherDetails: json["other_details"],
-        features: Features.fromJson(_asMap(json["features"])),
-        images: _asList(
-          json["images"],
-        ).map((x) => Image.fromJson(_asMap(x))).toList(),
-        isFavorite: _asBool(json["is_favorite"]),
-      );
+  factory MyInventrySearchDatum.fromJson(Map<String, dynamic> json) {
+    final dealerJson = Map<String, dynamic>.from(_asMap(json["dealer"]));
+    dealerJson["car_post_date"] = _extractCarPostDate(json, dealerJson);
+
+    return MyInventrySearchDatum(
+      dealer: Dealer.fromJson(dealerJson),
+      id: _asInt(json["id"]),
+      status: _asString(json["status"]),
+      brand: Brand.fromJson(_asMap(json["brand"])),
+      model: Brand.fromJson(_asMap(json["model"])),
+      variant: Brand.fromJson(_asMap(json["variant"])),
+      color: Color.fromJson(_asMap(json["color"])),
+      fuelType: FuelType.fromJson(_asMap(json["fuel_type"])),
+      transmission: Brand.fromJson(_asMap(json["transmission"])),
+      manufacturingYear: _asString(json["manufacturing_year"]),
+      kmRange: _asString(json["km_range"]),
+      ownerType: Brand.fromJson(_asMap(json["owner_type"])),
+      rto: Rto.fromJson(_asMap(json["rto"])),
+      otherDetails: json["other_details"],
+      features: Features.fromJson(_asMap(json["features"])),
+      images: _asList(
+        json["images"],
+      ).map((x) => Image.fromJson(_asMap(x))).toList(),
+      isFavorite: _asBool(json["is_favorite"]),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     "dealer": dealer.toJson(),
@@ -161,12 +165,14 @@ class Dealer {
   String dealershipName;
   String state;
   String city;
+  String carPostDate;
 
   Dealer({
     required this.id,
     required this.dealershipName,
     required this.state,
     required this.city,
+    required this.carPostDate,
   });
 
   factory Dealer.fromJson(Map<String, dynamic> json) => Dealer(
@@ -174,6 +180,19 @@ class Dealer {
     dealershipName: _asString(json["dealership_name"]),
     state: _asString(json["state"]),
     city: _asString(json["city"]),
+    carPostDate: _firstNonEmptyString([
+      json["car_post_date"],
+      json["carPostDate"],
+      json["posted_date"],
+      json["posted_at"],
+      json["postedAt"],
+      json["post_date"],
+      json["postDate"],
+      json["created_at"],
+      json["createdAt"],
+      json["created_on"],
+      json["createdOn"],
+    ]),
   );
 
   Map<String, dynamic> toJson() => {
@@ -181,6 +200,7 @@ class Dealer {
     "dealership_name": dealershipName,
     "state": state,
     "city": city,
+    "car_post_date": carPostDate,
   };
 }
 
@@ -298,6 +318,42 @@ List<dynamic> _extractInventorySearchItems(dynamic value) {
     if (nestedData is List) return nestedData;
   }
   return const [];
+}
+
+String _extractCarPostDate(
+  Map<String, dynamic> carJson, [
+  Map<String, dynamic>? dealerJson,
+]) {
+  const keys = <String>[
+    'car_post_date',
+    'carPostDate',
+    'posted_date',
+    'posted_at',
+    'postedAt',
+    'post_date',
+    'postDate',
+    'created_at',
+    'createdAt',
+    'created_on',
+    'createdOn',
+  ];
+
+  final dealerMap = dealerJson ?? _asMap(carJson["dealer"]);
+
+  return _firstNonEmptyString([
+    for (final key in keys) dealerMap[key],
+    for (final key in keys) carJson[key],
+  ]);
+}
+
+String _firstNonEmptyString(Iterable<dynamic> values, {String fallback = ''}) {
+  for (final value in values) {
+    final parsed = _asString(value).trim();
+    if (parsed.isNotEmpty && parsed.toLowerCase() != 'null') {
+      return parsed;
+    }
+  }
+  return fallback;
 }
 
 String _asString(dynamic value, {String fallback = ''}) {

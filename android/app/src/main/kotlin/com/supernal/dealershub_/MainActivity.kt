@@ -1,4 +1,4 @@
-package com.example.dealershub_
+package com.supernal.dealershub_
 
 import io.flutter.embedding.android.FlutterActivity
 

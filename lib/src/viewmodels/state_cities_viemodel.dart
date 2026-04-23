@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dealershub_/src/services/state_and_cities.dart';
 import 'package:dealershub_/src/models/regester%20forms/state_model.dart';
 import 'package:dealershub_/src/models/regester%20forms/cities_model.dart';
+import 'package:dealershub_/src/utils/helper/error_message_helper.dart';
 
 // ViewModel to manage states
 class StateViemodel extends ChangeNotifier {
@@ -29,7 +30,7 @@ class StateViemodel extends ChangeNotifier {
         print('Error: $error');
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       print('Exception: $error');
     }
 
@@ -61,7 +62,7 @@ class CitiesViemodel extends ChangeNotifier {
         error = 'Failed to load cities';
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
     }
 
     isLoading = false;

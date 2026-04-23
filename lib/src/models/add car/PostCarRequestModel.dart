@@ -39,7 +39,7 @@ class PostCarRequestModel {
   final List<File> images;
 
   // 🔹 final status
-  // final String status;
+  final String status;
 
   PostCarRequestModel({
     required this.brandId,
@@ -65,8 +65,13 @@ class PostCarRequestModel {
     this.extraExteriorFeatures = const [],
     this.extraInfotainmentFeatures = const [],
     this.images = const [],
-    // this.status = "active",
-  });
+    String status = "inactive",
+  }) : status = _normalizeStatus(status);
+
+  static String _normalizeStatus(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'active' ? 'active' : 'inactive';
+  }
 
   /// ✅ Convert to MultipartRequest
   Future<http.MultipartRequest> toMultipartRequest(String url) async {
@@ -84,7 +89,7 @@ class PostCarRequestModel {
       'rto_id': rtoId.toString(),
       'manufacturing_year': manufacturingYear.toString(),
       'km_range': kmRange,
-      // 'status': status,
+      'status': status,
     });
 
     // 🔹 OTHER DETAILS (JSON STRING - ONLY INCLUDE NON-EMPTY VALUES)
@@ -149,14 +154,25 @@ class PostCarRequestModel {
       final multipartFile = await http.MultipartFile.fromPath(
         'images[${i + 1}]',
         file.path,
-        contentType: http.MediaType(
-          'image',
-          'jpeg',
-        ), // ✅ Set correct content-type
+        contentType: _imageMediaType(file.path),
       );
       request.files.add(multipartFile);
     }
 
     return request;
+  }
+
+  http.MediaType _imageMediaType(String path) {
+    final lowerPath = path.toLowerCase();
+
+    if (lowerPath.endsWith('.png')) {
+      return http.MediaType('image', 'png');
+    }
+    if (lowerPath.endsWith('.jpg') || lowerPath.endsWith('.jpeg')) {
+      return http.MediaType('image', 'jpeg');
+    }
+
+    // Fallback keeps current behavior for unknown image extensions.
+    return http.MediaType('image', 'jpeg');
   }
 }

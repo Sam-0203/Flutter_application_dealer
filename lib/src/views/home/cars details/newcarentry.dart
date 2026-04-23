@@ -1,8 +1,7 @@
 import 'package:dealershub_/src/utils/colors.dart';
 import 'package:dealershub_/src/utils/route/route.dart';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../utils/app_costants.dart';
@@ -64,112 +63,128 @@ class _NewCarDetailsState extends State<NewCarDetails> {
 
   // <=== : Select Year : ===>
   Future<void> _selectYear(BuildContext context) async {
-    final now = DateTime.now();
-    final pickedYear = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        DateTime displayedDate = selectedDate ?? DateTime(now.year - 20);
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left),
-                          onPressed: () {
-                            setState(
-                              () => displayedDate = DateTime(
-                                displayedDate.year - 12,
-                              ),
-                            );
-                          },
-                        ),
-                        Text(
-                          'Select year',
-                          style: GoogleFonts.mulish(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1F3C88),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right),
-                          onPressed: () {
-                            setState(
-                              () => displayedDate = DateTime(
-                                displayedDate.year + 12,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 300,
-                      child: YearPicker(
-                        firstDate: DateTime(1950),
-                        lastDate: DateTime(now.year),
-                        initialDate: displayedDate,
-                        selectedDate: selectedDate ?? displayedDate,
-                        onChanged: (value) =>
-                            Navigator.of(context).pop(value.year),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(
-                            'Cancel',
-                            style: GoogleFonts.mulish(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1F3C88),
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(now.year);
-                          },
-                          child: Text(
-                            'Ok',
-                            style: GoogleFonts.mulish(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1F3C88),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    try {
+      final now = DateTime.now();
+      const firstYear = 1950;
+      final years = List<int>.generate(
+        now.year - firstYear + 1,
+        (index) => firstYear + index,
+      );
+      int selectedYear = selectedDate?.year ?? now.year;
+      if (selectedYear < firstYear) selectedYear = firstYear;
+      if (selectedYear > now.year) selectedYear = now.year;
 
-    if (pickedYear != null) {
-      setState(() {
-        selectedDate = DateTime(pickedYear);
-        _dateController.text = pickedYear.toString();
-      });
+      final wheelController = FixedExtentScrollController(
+        initialItem: selectedYear - firstYear,
+      );
+
+      final pickedYear = await showModalBottomSheet<int>(
+        context: context,
+        backgroundColor: Colors.white,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1F3C88),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'Select year',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1F3C88),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(context).pop(selectedYear),
+                            child: Text(
+                              'Done',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1F3C88),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        height: 220,
+                        child: ListWheelScrollView.useDelegate(
+                          controller: wheelController,
+                          itemExtent: 46,
+                          diameterRatio: 1.5,
+                          perspective: 0.003,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            setModalState(() {
+                              selectedYear = years[index];
+                            });
+                          },
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            childCount: years.length,
+                            builder: (context, index) {
+                              final year = years[index];
+                              final isSelected = year == selectedYear;
+
+                              return Center(
+                                child: Text(
+                                  year.toString(),
+                                  style: TextStyle(
+                                    fontSize: isSelected ? 24 : 20,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w800
+                                        : FontWeight.w500,
+                                    color: isSelected
+                                        ? const Color(0xFF1F3C88)
+                                        : Colors.black54,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+      wheelController.dispose();
+
+      if (pickedYear != null) {
+        setState(() {
+          selectedDate = DateTime(pickedYear);
+          _dateController.text = pickedYear.toString();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error in _selectYear: $e');
     }
   }
 
@@ -399,7 +414,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('new ca details: ${widget.role}');
+    debugPrint('new car details: ${widget.role}');
     // submitingData
     void submitingData() {
       // <=== : VALIDATION : ===>
@@ -421,7 +436,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                 SizedBox(width: 5),
                 Text(
                   'Please fill all mandatory fields',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -614,7 +629,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                         'Provide your car details and photos.\nPost your listing to reach potential buyers.', // Description text
                         maxLines: 2,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontWeight: FontWeight.w400,
                           fontSize: 16,
                           color: Color.fromRGBO(41, 68, 135, 1),
@@ -635,6 +650,8 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                       children: [
                         Row(children: [TextViews.mandatory]),
                         SizedBox(height: 16),
+
+                        // For Manufacturing Year ====>
                         TextFormField(
                           controller: _dateController,
                           readOnly: true,
@@ -678,8 +695,8 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            'Feaching Car Compaines....!',
-                                            style: GoogleFonts.mulish(
+                                            'Feaching Car Brands....!',
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -706,7 +723,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'No Data....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -746,9 +763,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
 
                         // For Car model ====>
                         UserDropdownField<int>(
-                          hintText: selectedMake == null
-                              ? 'Select car company first'
-                              : InputFieldPlaceholder.model,
+                          hintText: InputFieldPlaceholder.model,
                           value: selectedModel,
                           items: selectedMake == null
                               ? [
@@ -761,8 +776,8 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            'Select car company first',
-                                            style: GoogleFonts.mulish(
+                                            'Select the car Brand first',
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -784,7 +799,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'There is No car Models for this company....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -833,7 +848,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'Feaching Fuel Types....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -860,7 +875,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'No Data....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -900,7 +915,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'Feaching Transmission Types....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -927,7 +942,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'No Data....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -952,9 +967,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
 
                         // Car Varients Types ====>
                         UserDropdownField<int>(
-                          hintText: selectedModel == null
-                              ? 'Select model first'
-                              : InputFieldPlaceholder.variant,
+                          hintText: InputFieldPlaceholder.variant,
                           value: selectedVariant,
                           items: selectedModel == null
                               ? [
@@ -970,8 +983,8 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         const SizedBox(width: 10),
                                         Expanded(
                                           child: Text(
-                                            'Select model first',
-                                            style: GoogleFonts.mulish(
+                                            'Select the car model first',
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -1007,7 +1020,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'There is No Varients....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1051,7 +1064,29 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                         UserDropdownField<int>(
                           hintText: InputFieldPlaceholder.color,
                           value: selectedColor,
-                          items: carColorsVm.isLoading
+                          items: selectedVariant == null
+                              ? [
+                                  DropdownMenuItem(
+                                    value: null,
+                                    child: Row(
+                                      children: [
+                                        SizedBox(width: 10),
+                                        Icon(Icons.info_outline, size: 30),
+                                        SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'Select the car Variant first',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ]
+                              : carColorsVm.isLoading
                               ? [
                                   DropdownMenuItem(
                                     value: null,
@@ -1063,7 +1098,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'Feaching Colors....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                             ),
@@ -1090,7 +1125,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'No Data....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1138,7 +1173,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                               decoration: InputDecoration(
                                 hintText:
                                     InputFieldPlaceholder.kilometersDriven,
-                                hintStyle: GoogleFonts.mulish(
+                                hintStyle: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w400,
                                   color: Color.fromRGBO(59, 59, 59, 1),
@@ -1185,7 +1220,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'Feaching Registers....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1212,7 +1247,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'No Data....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1247,7 +1282,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'Feaching Registers....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -1274,7 +1309,7 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                                         Expanded(
                                           child: Text(
                                             'No Data....!',
-                                            style: GoogleFonts.mulish(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                             ),

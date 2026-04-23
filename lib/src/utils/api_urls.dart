@@ -85,4 +85,14 @@ class ApiUrls {
 
   static const String deleteFromFavAgent =
       '$baseURl/agent/favorites'; // DELETE a car from favorites (car_id sent as form-data)
+
+  // <==========User profile APIs==========>
+  static const String getDealerUserProfile =
+      '$baseURl/dealer/profile'; // GET user profile details based on token - dealers
+
+  static const String getAgentUserProfile =
+      '$baseURl/agents/profile'; // GET user profile details based on token - agents
+
+  static const String UserLoggedOut =
+      '$baseURl/logout'; // POST user logout based on token
 }

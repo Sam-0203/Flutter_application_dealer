@@ -1,0 +1,134 @@
+DEALERSHUB PROJECT DETAILS
+Generated on: 2026-04-17
+
+1) Project Overview
+- Project name: dealershub_
+- Framework: Flutter (Dart)
+- Purpose: A dealer/agent car marketplace workflow app with onboarding, authentication via OTP, car listing/inventory management, filtering/search, favorites, and profile/logout features.
+- Platforms configured: Android, iOS, Web, macOS, Windows, Linux.
+
+2) Tech Stack and Key Packages
+- State management: provider
+- Networking: http (REST + multipart upload)
+- Font system: google_fonts (Mulish applied from app theme)
+- Local secure data: flutter_secure_storage
+- Local app flags/preferences: shared_preferences
+- Image handling: image_picker, flutter_image_compress
+- Connectivity and network state: internet_connection_checker_plus, connectivity_plus
+- OTP autofill: sms_autofill
+- UI helpers: smooth_page_indicator, shimmer, keyboard_actions, textfield_tags, datepicker_dropdown
+- Sharing/files: share_plus, path_provider
+
+3) High-Level Architecture
+- Entry point: lib/main.dart
+- Pattern: View -> ViewModel (ChangeNotifier) -> Service -> Model
+- Routing: central route controller in lib/src/utils/route/route.dart
+- API constants: lib/src/utils/api_urls.dart
+- Utility helpers: lib/src/utils/helper/
+
+4) Source Layout Summary
+- lib/main.dart: App bootstrap, providers registration, global theme, connectivity handling.
+- lib/src/models/: request/response model classes for user, registration forms, and car domain.
+- lib/src/services/: API service classes for auth/profile and car operations.
+- lib/src/viewmodels/: ChangeNotifier classes for UI state and async operations.
+- lib/src/views/: onboarding, auth screens, home tabs, car detail/update flows.
+- lib/src/utils/: route setup, constants, colors, reusable widgets, helpers.
+
+5) Module Counts (Dart files)
+- Total lib/*.dart files: 83
+- Models: 41
+- Views: 22
+- ViewModels: 4
+- Services: 3
+- Utils: 12
+
+6) App Startup and Session Flow
+- On app start:
+  1. Initializes Flutter bindings.
+  2. Forces portrait mode on Android.
+  3. Runs first-install check via InstallChecker (clears secure storage on fresh install/reinstall).
+  4. Reads token and role from SecureStorage.
+  5. Chooses initial route:
+     - If token exists: HomeScreen route
+     - Else: Onboarding route
+- Registers many ChangeNotifier providers globally in MultiProvider.
+
+7) Global Theme and Typography
+- Theme configured in main.dart ThemeData.
+- Mulish is configured globally through GoogleFonts in the app theme.
+- Explicit per-widget GoogleFonts usage was removed so font styling is now theme-driven.
+
+8) Navigation and Route Design
+- Centralized named routes in lib/src/utils/route/route.dart.
+- Key route groups:
+  - Onboarding screens
+  - User role selection
+  - Signup/Login/OTP
+  - Home, list of cars, inventory
+  - New car entry, optional details, review, update
+  - Favorites
+  - Profile update
+- Route controller validates and parses arguments for multiple screens.
+
+9) Network/API Layer
+- Base API URL is defined in ApiUrls (currently: http://13.204.62.17).
+- Service coverage includes:
+  - Auth + OTP login/verification
+  - Language/state/city data
+  - Car masters (brand/model/fuel/transmission/variants/colors/RTO/owner type)
+  - Car features (safety/comfort/infotainment/interior/exterior)
+  - Create/read/update/delete car
+  - Search/filter/list/my-inventory
+  - Dealer and agent favorites
+  - Dealer/agent profile fetch
+  - Logout
+- Token-based APIs use Bearer token from SecureStorage.
+
+10) Car Upload and Media Handling
+- Car creation uses multipart upload through PostCarRequestModel + PostCarService.
+- Image content type handling supports:
+  - .jpg / .jpeg -> image/jpeg
+  - .png -> image/png
+  - fallback -> image/jpeg
+
+11) Security and Persistence
+- Secure token/role storage in flutter_secure_storage.
+- App install flag in shared_preferences.
+- On first install/reinstall, secure storage is cleared to avoid stale credentials.
+
+12) Connectivity Behavior
+- Main app listens to internet status changes.
+- Tracks connected/disconnected state and updates UI behavior.
+- Shows snackbar when internet disconnects.
+- On reconnect, refreshes list/search data providers.
+
+13) Core Feature Coverage
+- User onboarding and role-based auth path (dealer/agent).
+- OTP-based registration/login flows.
+- Browse/search/filter car listings.
+- Dealer inventory management.
+- Add new car with rich details and image uploads.
+- Update existing car details and images.
+- Favorite/unfavorite cars (dealer and agent variants).
+- Profile fetch and logout workflow.
+
+14) Main Important Files
+- lib/main.dart
+- lib/src/utils/route/route.dart
+- lib/src/utils/api_urls.dart
+- lib/src/services/user_service.dart
+- lib/src/services/add_car_services.dart
+- lib/src/models/add car/PostCarRequestModel.dart
+- lib/src/viewmodels/add_car_viewmodel.dart
+- lib/src/viewmodels/user_viewmodel.dart
+
+15) Run/Build Basics
+- Get dependencies: flutter pub get
+- Run app: flutter run
+- Analyze: flutter analyze
+- Test (if tests exist): flutter test
+- Build Android APK: flutter build apk
+
+16) Current Notes
+- The project currently has analyzer/lint warnings unrelated to core runtime logic (naming conventions, unused imports/variables, etc.).
+- README is minimal and can be expanded using this document as a base.

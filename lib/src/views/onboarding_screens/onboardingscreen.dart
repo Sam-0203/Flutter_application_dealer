@@ -12,6 +12,13 @@ class OnBoardingScreen extends StatefulWidget {
 
 class _OnBoardingScreenState extends State<OnBoardingScreen> {
   final PageController _controller = PageController();
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = onboardingPages.values.toList(growable: false);
+  }
 
   @override
   void dispose() {
@@ -24,46 +31,49 @@ class _OnBoardingScreenState extends State<OnBoardingScreen> {
     final isTablet = MediaQuery.of(context).size.width >= 600;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF1F1F1),
       body: Stack(
         children: [
-          // Intro Screens
-          PageView(
-            controller: _controller,
-            children: onboardingPages.values.toList(),
-          ),
-
-          // Bottom controls (responsive)
+          PageView(controller: _controller, children: _pages),
           Positioned(
-            bottom: isTablet ? 32 : 20,
+            bottom: isTablet ? 30 : 25,
             left: 0,
             right: 0,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: isTablet ? 30 : 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  SmoothPageIndicator(
-                    controller: _controller,
-                    count: onboardingPages.length,
-                    effect: WormEffect(
-                      activeDotColor: Colors.white,
-                      dotColor: Colors.grey,
-                      dotHeight: isTablet ? 12 : 10,
-                      dotWidth: isTablet ? 12 : 10,
+            child: SafeArea(
+              top: true,
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: isTablet ? 44 : 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SmoothPageIndicator(
+                      controller: _controller,
+                      count: _pages.length,
+                      effect: WormEffect(
+                        activeDotColor: Colors.white,
+                        dotColor: Colors.white54,
+                        dotHeight: isTablet ? 12 : 10,
+                        dotWidth: isTablet ? 12 : 10,
+                      ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        OnBoardingscreen5,
-                        (route) => false,
-                      );
-                    },
-                    child: TextViews.Skip,
-                  ),
-                ],
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(0, 0),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          OnBoardingscreen5,
+                          (route) => false,
+                        );
+                      },
+                      child: TextViews.Skip,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

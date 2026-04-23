@@ -1,8 +1,9 @@
+import 'dart:io';
+
+import 'package:dealershub_/src/utils/api_urls.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:dealershub_/src/utils/responsive/responsive_helper.dart';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 const Color _defaultChipColor = Color(0xFFE0E0E0);
@@ -74,13 +75,75 @@ Widget _buildCardActionButton({
   );
 }
 
-Future<bool> _checkImageExists(String url) async {
-  try {
-    final response = await http.head(Uri.parse(url));
-    return response.statusCode == 200;
-  } catch (e) {
-    return false;
+String _normalizeImagePath(String? imagePath) {
+  final trimmed = (imagePath ?? '').trim();
+  if (trimmed.isEmpty) return '';
+
+  final uri = Uri.tryParse(trimmed);
+  if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+    return trimmed;
   }
+
+  if (uri != null && uri.scheme == 'file') {
+    return uri.toFilePath();
+  }
+
+  if (trimmed.startsWith('/var/') || trimmed.startsWith('/data/')) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith('/')) {
+    return '${ApiUrls.baseURl}$trimmed';
+  }
+
+  return '${ApiUrls.baseURl}/$trimmed';
+}
+
+Widget _imagePlaceholder({double iconSize = 50}) {
+  return Container(
+    color: const Color(0xFFF2F2F2),
+    child: Icon(Icons.image, size: iconSize, color: Colors.grey),
+  );
+}
+
+Widget _imageError({double iconSize = 50}) {
+  return Container(
+    color: const Color(0xFFF2F2F2),
+    child: Icon(Icons.broken_image, size: iconSize, color: Colors.grey),
+  );
+}
+
+Widget _buildImageFromPath(
+  String? imagePath, {
+  double iconSize = 50,
+  BoxFit fit = BoxFit.cover,
+}) {
+  final normalizedPath = _normalizeImagePath(imagePath);
+  if (normalizedPath.isEmpty) {
+    return _imagePlaceholder(iconSize: iconSize);
+  }
+
+  final isNetwork =
+      normalizedPath.startsWith('http://') ||
+      normalizedPath.startsWith('https://');
+
+  if (isNetwork) {
+    return Image.network(
+      normalizedPath,
+      fit: fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      },
+      errorBuilder: (_, __, ___) => _imageError(iconSize: iconSize),
+    );
+  }
+
+  return Image.file(
+    File(normalizedPath),
+    fit: fit,
+    errorBuilder: (_, __, ___) => _imageError(iconSize: iconSize),
+  );
 }
 
 // ------------Single Car Details starts here----------------
@@ -96,6 +159,7 @@ class Car {
   final String dealer;
   final String city;
   final String state;
+  final String carPostDate;
 
   const Car({
     required this.id,
@@ -109,6 +173,7 @@ class Car {
     required this.dealer,
     required this.city,
     required this.state,
+    required this.carPostDate,
   });
 }
 
@@ -130,14 +195,25 @@ class CarCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMobile =
         ResponsiveHelper.getDeviceType(context) == DeviceType.mobile;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final isTabletLandscape = !isMobile && isLandscape;
     final cardPadding = ResponsiveHelper.getResponsiveCardPadding(context);
     final titleFontSize = ResponsiveHelper.getTitleFontSize(context);
     final chipFontSize = ResponsiveHelper.getChipFontSize(context);
     final spacing = ResponsiveHelper.getResponsiveSpacing(context);
-    final effectiveSpacing = isMobile ? 10.0 : spacing;
-    final effectiveTitleSize = isMobile ? titleFontSize - 2 : titleFontSize;
-    final effectiveChipSize = isMobile ? chipFontSize - 0.5 : chipFontSize;
-    final imageAspectRatio = isMobile ? 1.95 : (16 / 9);
+    final effectiveSpacing = isMobile
+        ? 10.0
+        : (isTabletLandscape ? spacing * 0.72 : spacing);
+    final effectiveTitleSize = isMobile
+        ? titleFontSize - 2
+        : (isTabletLandscape ? titleFontSize - 1.5 : titleFontSize);
+    final effectiveChipSize = isMobile
+        ? chipFontSize - 0.5
+        : (isTabletLandscape ? chipFontSize - 1.0 : chipFontSize);
+    final imageAspectRatio = isMobile
+        ? 1.95
+        : (isTabletLandscape ? 2.2 : (16 / 9));
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -159,7 +235,7 @@ class CarCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       car.title,
-                      style: GoogleFonts.mulish(
+                      style: TextStyle(
                         fontSize: effectiveTitleSize,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
@@ -186,6 +262,7 @@ class CarCard extends StatelessWidget {
                   _chip(context, car.kms, effectiveChipSize),
                   _chip(context, car.owner, effectiveChipSize),
                   _chip(context, car.reg, effectiveChipSize),
+                  _chip(context, car.carPostDate, effectiveChipSize),
                 ],
               ),
               SizedBox(height: effectiveSpacing),
@@ -195,55 +272,7 @@ class CarCard extends StatelessWidget {
                 aspectRatio: imageAspectRatio,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(isMobile ? 12 : 10),
-                  child: car.image.isNotEmpty
-                      ? FutureBuilder<bool>(
-                          future: _checkImageExists(car.image),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return Container(
-                                color: const Color(0xFFF2F2F2),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              );
-                            }
-                            if (snapshot.hasData && snapshot.data == true) {
-                              return Image.network(
-                                car.image,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFFF2F2F2),
-                                  child: const Icon(
-                                    Icons.broken_image,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              return Container(
-                                color: const Color(0xFFF2F2F2),
-                                child: const Icon(
-                                  Icons.broken_image,
-                                  size: 50,
-                                  color: Colors.grey,
-                                ),
-                              );
-                            }
-                          },
-                        )
-                      : Container(
-                          color: const Color(0xFFF2F2F2),
-                          child: const Icon(
-                            Icons.image,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
-                        ),
+                  child: _buildImageFromPath(car.image, iconSize: 50),
                 ),
               ),
               SizedBox(height: effectiveSpacing / 1.5),
@@ -253,14 +282,14 @@ class CarCard extends StatelessWidget {
                 children: [
                   Image.asset(
                     'assets/placeholders/user-octagon.png',
-                    width: isMobile ? 18 : 20,
-                    height: isMobile ? 18 : 20,
+                    width: isMobile ? 18 : (isTabletLandscape ? 18 : 20),
+                    height: isMobile ? 18 : (isTabletLandscape ? 18 : 20),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '${car.dealer}, ${car.state}, ${car.city}',
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(
                         fontSize: effectiveChipSize + (isMobile ? 0.5 : 0),
                         fontWeight: FontWeight.w400,
                         color: Colors.black,
@@ -296,7 +325,7 @@ class CarCard extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.mulish(
+        style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.w600,
           color: _getChipTextColor(bgColor),
@@ -319,6 +348,7 @@ class Cars {
   final String dealer;
   final String city;
   final String state;
+  final String carPostDate;
 
   const Cars({
     required this.title,
@@ -331,6 +361,7 @@ class Cars {
     required this.dealer,
     required this.city,
     required this.state,
+    required this.carPostDate,
   });
 }
 
@@ -375,7 +406,7 @@ class CarsCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       cars.title,
-                      style: GoogleFonts.mulish(
+                      style: TextStyle(
                         fontSize: isMobile ? titleFontSize - 2 : titleFontSize,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
@@ -402,6 +433,7 @@ class CarsCard extends StatelessWidget {
                   _chip(context, cars.kms, chipFontSize),
                   _chip(context, cars.owner, chipFontSize),
                   _chip(context, cars.reg, chipFontSize),
+                  _chip(context, cars.carPostDate, chipFontSize),
                 ],
               ),
               SizedBox(height: spacing),
@@ -437,7 +469,7 @@ class CarsCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '${cars.dealer}, ${cars.state}, ${cars.city}',
-                      style: GoogleFonts.cairo(
+                      style: TextStyle(
                         fontSize: chipFontSize,
                         fontWeight: FontWeight.w400,
                         color: Colors.black,
@@ -456,8 +488,6 @@ class CarsCard extends StatelessWidget {
   }
 
   Widget _carImage(String? imagePath) {
-    final hasImage = imagePath != null && imagePath.trim().isNotEmpty;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -465,19 +495,7 @@ class CarsCard extends StatelessWidget {
         height: double.infinity,
         color: const Color(0xFFF2F2F2),
         alignment: Alignment.center,
-        child: hasImage
-            ? Image.network(
-                imagePath,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.broken_image,
-                  size: 30,
-                  color: Colors.grey,
-                ),
-              )
-            : const Icon(Icons.image, size: 40, color: Colors.grey),
+        child: _buildImageFromPath(imagePath, iconSize: 40),
       ),
     );
   }
@@ -500,7 +518,7 @@ class CarsCard extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.mulish(
+        style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.w600,
           color: _getChipTextColor(bgColor),
@@ -544,7 +562,6 @@ class SmallCarsCard extends StatelessWidget {
 
     final deviceType = ResponsiveHelper.getDeviceType(context);
     final double iconSize = deviceType == DeviceType.tablet ? 50 : 40;
-    final hasImage = lessDetails.image.trim().isNotEmpty;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -563,7 +580,7 @@ class SmallCarsCard extends StatelessWidget {
                 lessDetails.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.cairo(
+                style: TextStyle(
                   fontSize: titleFontSize,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
@@ -597,20 +614,13 @@ class SmallCarsCard extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                     color: const Color(0xFFF2F2F2),
-                    alignment: Alignment.center,
-                    child: hasImage
-                        ? Image.network(
-                            lessDetails.image,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.broken_image,
-                              size: iconSize,
-                              color: Colors.grey,
-                            ),
-                          )
-                        : Icon(Icons.image, size: iconSize, color: Colors.grey),
+                    child: SizedBox.expand(
+                      child: _buildImageFromPath(
+                        lessDetails.image,
+                        iconSize: iconSize,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -639,7 +649,7 @@ class SmallCarsCard extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.mulish(
+        style: TextStyle(
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
           color: _getChipTextColor(bgColor),

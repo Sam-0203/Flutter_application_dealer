@@ -8,6 +8,7 @@ import 'package:dealershub_/src/views/home/tabs/myinvetory.dart';
 import 'package:dealershub_/src/views/home/cars%20details/newcarentry.dart';
 import 'package:dealershub_/src/views/user/login.dart';
 import 'package:dealershub_/src/views/user/otp_screen.dart';
+import 'package:dealershub_/src/views/user/user_update.dart';
 import 'package:flutter/material.dart';
 
 import 'package:dealershub_/src/views/onboarding_screens/onboardscreen1.dart';
@@ -41,7 +42,8 @@ const String carDetailsReview = 'CarDetails';
 const String success = 'Success';
 const String filteringScreen = 'FilteringScreen';
 const String carUpdateDetails = 'CarUpdateDetails';
-const String myfavoriteCarsRoute = 'MyFavoriteCars';
+const String myFavoriteCarsRoute = 'MyFavoriteCars';
+const String myProfileUpdate = 'MyProfileUpdate';
 
 // On Boarding Screens.....
 final Map<String, Widget> onboardingPages = {
@@ -74,9 +76,11 @@ Route<dynamic> controller(RouteSettings settings) {
       }
 
       final String authType = args['auth_type'];
+      final String appbar_hiden = args['appbar_hide'];
 
       return MaterialPageRoute(
-        builder: (context) => UserRole(authType: authType),
+        builder: (context) =>
+            UserRole(authType: authType, appbar_hide: appbar_hiden),
       );
 
     // NewUserSignup
@@ -254,12 +258,15 @@ Route<dynamic> controller(RouteSettings settings) {
       return MaterialPageRoute(
         builder: (context) => CarUpdateDetails(carId: carId, role: role),
       );
-    case myfavoriteCarsRoute:
+    case myFavoriteCarsRoute:
       final args = settings.arguments as Map<String, dynamic>?;
       final String? role = args?['role'] as String?;
       return MaterialPageRoute(
         builder: (context) => MyFavoriteCars(role: role),
       );
+
+    case myProfileUpdate:
+      return MaterialPageRoute(builder: (context) => const UserUpdate());
     default:
       throw ('Page are not found');
   }

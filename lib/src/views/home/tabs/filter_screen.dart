@@ -1,7 +1,7 @@
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 class FilteringScreenDetails extends StatefulWidget {
   final String role;
@@ -12,8 +12,7 @@ class FilteringScreenDetails extends StatefulWidget {
 }
 
 class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
-  // multiple selection variables
-  Set<int> selectedBrandIds = {};
+  int? selectedBrandId;
   Set<int> selectedModelIds = {};
   Set<int> selectedFuelIds = {};
   Set<int> selectedOwnerIds = {};
@@ -23,7 +22,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
   bool isSelected(int id) {
     switch (selectedIndex) {
       case 0:
-        return selectedBrandIds.contains(id);
+        return selectedBrandId == id;
       case 1:
         return selectedModelIds.contains(id);
       case 2:
@@ -33,6 +32,39 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
       default:
         return false;
     }
+  }
+
+  Widget _buildFilterShimmerTile() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(height: 14, width: 140, color: Colors.white),
+                  const SizedBox(height: 8),
+                  Container(height: 12, width: 90, color: Colors.white),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Container(
+              height: 20,
+              width: 20,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -55,7 +87,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
   }
 
   List<String> leftFilters = [
-    "Car Companies",
+    "Car Brands",
     "Car Models",
     "Fuel Types",
     "Owners",
@@ -79,10 +111,9 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
                 color: Colors.black,
                 size: 20,
               ),
-              const SizedBox(width: 10),
               Text(
                 'Filters',
-                style: GoogleFonts.mulish(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
@@ -92,7 +123,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
               TextButton(
                 onPressed: () {
                   setState(() {
-                    selectedBrandIds.clear();
+                    selectedBrandId = null;
                     selectedModelIds.clear();
                     selectedFuelIds.clear();
                     selectedOwnerIds.clear();
@@ -101,7 +132,11 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
 
                 child: Text(
                   'Clear Filters',
-                  style: GoogleFonts.mulish(fontSize: 14, color: Colors.black),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -145,7 +180,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
                     ),
                     child: Text(
                       leftFilters[index],
-                      style: GoogleFonts.mulish(
+                      style: TextStyle(
                         fontWeight: selectedIndex == index
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -171,26 +206,71 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
                     builder:
                         (context, companyVM, modelVM, fuelVM, ownerVM, child) {
                           List<dynamic> currentList = [];
+                          bool isCurrentLoading = false;
 
                           // 👇 Switch based on selectedIndex
                           switch (selectedIndex) {
                             case 0:
+                              isCurrentLoading = companyVM.isLoading;
                               currentList = companyVM.carCompany;
                               break;
                             case 1:
-                              currentList = modelVM.allCarModels;
+                              if (selectedBrandId != null) {
+                                currentList = modelVM.allCarModels
+                                    .where(
+                                      (model) =>
+                                          model.brandId == selectedBrandId,
+                                    )
+                                    .toList();
+                              }
+                              isCurrentLoading = modelVM.isLoading;
                               break;
                             case 2:
+                              isCurrentLoading = fuelVM.isLoading;
                               currentList = fuelVM.carFuelTypes;
                               break;
                             case 3:
+                              isCurrentLoading = ownerVM.isLoading;
                               currentList = ownerVM.carOwners;
                               break;
                           }
 
+                          if (selectedIndex == 1 && selectedBrandId == null) {
+                            return Center(
+                              child: Text(
+                                'Select one car brand \nto see car models.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black54,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            );
+                          }
+
+                          if (isCurrentLoading) {
+                            return ListView.builder(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              itemCount: 5,
+                              itemBuilder: (context, index) {
+                                return _buildFilterShimmerTile();
+                              },
+                            );
+                          }
+
                           if (currentList.isEmpty) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
+                            return Center(
+                              child: Text(
+                                selectedIndex == 1
+                                    ? 'No models found for selected brand.'
+                                    : 'No data found.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black54,
+                                ),
+                              ),
                             );
                           }
 
@@ -202,15 +282,38 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
                               final String name = item.name ?? item.title ?? "";
                               final int id = item.id;
 
+                              if (selectedIndex == 0) {
+                                return RadioListTile<int>(
+                                  value: id,
+                                  groupValue: selectedBrandId,
+                                  onChanged: (int? value) {
+                                    if (value == null) return;
+                                    setState(() {
+                                      if (selectedBrandId != value) {
+                                        selectedBrandId = value;
+                                        selectedModelIds.clear();
+                                      }
+                                    });
+                                  },
+                                  title: Text(
+                                    name,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  activeColor: Colors.orange,
+                                  controlAffinity:
+                                      ListTileControlAffinity.trailing,
+                                );
+                              }
+
                               return CheckboxListTile(
                                 value: isSelected(id),
                                 onChanged: (bool? value) {
                                   setState(() {
                                     if (value == true) {
                                       switch (selectedIndex) {
-                                        case 0:
-                                          selectedBrandIds.add(id);
-                                          break;
                                         case 1:
                                           selectedModelIds.add(id);
                                           break;
@@ -223,9 +326,6 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
                                       }
                                     } else {
                                       switch (selectedIndex) {
-                                        case 0:
-                                          selectedBrandIds.remove(id);
-                                          break;
                                         case 1:
                                           selectedModelIds.remove(id);
                                           break;
@@ -242,7 +342,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
 
                                 title: Text(
                                   name,
-                                  style: GoogleFonts.mulish(
+                                  style: TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -271,7 +371,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
             final filterVM = context.read<FilterCarViewModel>();
 
             await filterVM.getFilteredCars(
-              brandIds: selectedBrandIds.toList(),
+              brandIds: selectedBrandId != null ? [selectedBrandId!] : [],
               fuelTypeIds: selectedFuelIds.toList(),
               ownerTypeIds: selectedOwnerIds.toList(),
               modelIds: selectedModelIds.toList(),
@@ -289,7 +389,7 @@ class _FilteringScreenDetailsState extends State<FilteringScreenDetails> {
 
           child: Text(
             "Apply",
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Colors.white,

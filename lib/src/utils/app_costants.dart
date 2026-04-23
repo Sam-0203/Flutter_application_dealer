@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class TextViews {
   static Text LoginText = Text(
     'Log in and Unlock endless opportunities!',
     textAlign: TextAlign.center,
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 18,
       color: const Color.fromRGBO(41, 68, 135, 1),
       fontWeight: FontWeight.w700,
@@ -14,7 +13,7 @@ class TextViews {
 
   static Text ResendOTP = Text(
     'RESEND OTP',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontWeight: FontWeight.w600,
       fontSize: 18,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -22,7 +21,7 @@ class TextViews {
   );
   static Text submit = Text(
     'SUBMIT',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontWeight: FontWeight.w600,
       fontSize: 18,
       color: Colors.white,
@@ -30,7 +29,7 @@ class TextViews {
   );
   static Text cancel = Text(
     'Cancel',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontWeight: FontWeight.w600,
       fontSize: 18,
       color: const Color.fromRGBO(75, 119, 227, 1),
@@ -42,7 +41,7 @@ class TextViews {
       children: [
         TextSpan(
           text: 'Mandatory fields',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF1F3C88),
@@ -50,7 +49,7 @@ class TextViews {
         ),
         TextSpan(
           text: '*',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Colors.red,
@@ -61,8 +60,8 @@ class TextViews {
   );
 
   static Text OptionalFields = Text(
-    'Optional fields',
-    style: GoogleFonts.mulish(
+    'Optional Fields',
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w700,
       color: Color(0xFF1F3C88),
@@ -70,15 +69,15 @@ class TextViews {
   );
 
   static Text Backbutton1 = Text(
-    'Edit details',
-    style: GoogleFonts.mulish(fontWeight: FontWeight.w700, fontSize: 16),
+    'Edit Details',
+    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
   );
 
   static Row Skip = Row(
     children: [
       Text(
         'Skip',
-        style: GoogleFonts.mulish(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
           color: Colors.white,
@@ -90,7 +89,7 @@ class TextViews {
   );
   static Text GetStarted = Text(
     'GET STARTED',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: Colors.white,
@@ -98,7 +97,7 @@ class TextViews {
   );
   static Text SignUp = Text(
     'SIGN UP',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: const Color.fromRGBO(41, 68, 135, 1),
@@ -107,7 +106,7 @@ class TextViews {
 
   static Text newUserSignUp = Text(
     'SIGN UP',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: Colors.white,
@@ -115,7 +114,7 @@ class TextViews {
   );
   static Text next = Text(
     'NEXT',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: Colors.white,
@@ -125,13 +124,13 @@ class TextViews {
 
 // -:: Input placeholders ::-
 class InputFieldPlaceholder {
-  static String LoginInputNumber = 'Mobile number';
+  static String LoginInputNumber = 'Mobile Number';
 
-  static String DealerCompanyName = 'Dealer(company) name';
+  static String DealerCompanyName = 'Dealer(company) Name';
 
-  static String DealerFullName = 'Contact person (Full name)';
+  static String DealerFullName = 'Contact Person (Full Name)';
 
-  static String DealerNumber = 'Mobile number';
+  static String DealerNumber = 'Mobile Number';
 
   static String StateSelection = 'State';
 
@@ -139,17 +138,17 @@ class InputFieldPlaceholder {
 
   static String Pincode = 'Pincode';
 
-  static String PreferedLanguage = 'Preferred language ';
+  static String PreferedLanguage = 'Preferred Language';
 
   static String GSTIN = 'GSTIN (To get verified badge)';
 
-  static String EmailAddress = 'Email address (Recommended)';
+  static String EmailAddress = 'Email Address (Recommended)';
 
-  static String AlternateMobileNumber = 'Alternate mobile number';
+  static String AlternateMobileNumber = 'Alternate Mobile Number';
 
-  static String InstagramProfileURL = 'Instagram profile URL';
+  static String InstagramProfileURL = 'Instagram Profile URL';
 
-  static String FacebookProfileURL = 'Facebook profile URL';
+  static String FacebookProfileURL = 'Facebook Profile URL';
 
   static String WebsiteURL = 'Website URL';
 
@@ -158,7 +157,7 @@ class InputFieldPlaceholder {
       children: [
         TextSpan(
           text: 'By signing up, you’re agree to our ',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color.fromRGBO(59, 59, 59, 1),
@@ -166,7 +165,7 @@ class InputFieldPlaceholder {
         ),
         TextSpan(
           text: 'Terms & Conditions ',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color.fromRGBO(41, 68, 135, 1),
@@ -174,7 +173,7 @@ class InputFieldPlaceholder {
         ),
         TextSpan(
           text: 'and ',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color.fromRGBO(59, 59, 59, 1),
@@ -182,7 +181,7 @@ class InputFieldPlaceholder {
         ),
         TextSpan(
           text: ' Privacy Policy',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color.fromRGBO(41, 68, 135, 1),
@@ -194,7 +193,7 @@ class InputFieldPlaceholder {
 
   static Text SignUp = Text(
     'SIGN UP',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: Color.fromRGBO(255, 255, 255, 1),
@@ -202,7 +201,7 @@ class InputFieldPlaceholder {
   );
   static Text signIn = Text(
     'SIGN IN',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: Colors.black,
@@ -210,7 +209,7 @@ class InputFieldPlaceholder {
   );
   static Text logSignIn = Text(
     'SIGN IN',
-    style: GoogleFonts.inter(
+    style: TextStyle(
       fontSize: 18,
       fontWeight: FontWeight.w600,
       color: Colors.white,
@@ -219,7 +218,7 @@ class InputFieldPlaceholder {
 
   static Text Search = Text(
     'Search',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(59, 59, 59, 1),
@@ -228,22 +227,22 @@ class InputFieldPlaceholder {
 
   // New Car Entry Placeholders
   static String manufactorYear = 'Manufacturing year';
-  static String make = 'Make';
-  static String model = 'Model';
+  static String make = 'Car Brand';
+  static String model = 'Car Model';
   static String fuelType = 'Fuel type';
-  static String variant = 'Variant';
+  static String variant = 'Car Variant';
   static String transmission = 'Transmission type';
   static String color = 'Color';
-  static String kilometersDriven = 'No.of Kilometers';
-  static String registrationCity = 'Registration city';
-  static String carOwner = 'Owner(s)';
+  static String kilometersDriven = 'Kilometers Driven';
+  static String registrationCity = 'Registration city(RTO)';
+  static String carOwner = 'Number of Owners ';
 }
 
 class CarOptinalDetails {
   // Add a car details (Optionals) - Headings
   static Text otherDetaisl = Text(
     'Other details (optional)',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -252,7 +251,7 @@ class CarOptinalDetails {
 
   static Text safety = Text(
     'Safety Features (optional)',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -261,7 +260,7 @@ class CarOptinalDetails {
 
   static Text comfort = Text(
     'Comfort & Convenience (optional)',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -270,7 +269,7 @@ class CarOptinalDetails {
 
   static Text info = Text(
     'Infotainment & Connectivity (optional) ',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -279,7 +278,7 @@ class CarOptinalDetails {
 
   static Text inter = Text(
     'Interior Features (optional) ',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -288,7 +287,7 @@ class CarOptinalDetails {
 
   static Text exter = Text(
     'Exterior Features (optional) ',
-    style: GoogleFonts.mulish(
+    style: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
       color: Color.fromRGBO(41, 68, 135, 1),
@@ -300,7 +299,7 @@ class CarOptinalDetails {
       children: [
         TextSpan(
           text: 'NO',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w900,
             color: Colors.black,
@@ -308,7 +307,7 @@ class CarOptinalDetails {
         ),
         TextSpan(
           text: ', Service History is Available',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -322,7 +321,7 @@ class CarOptinalDetails {
       children: [
         TextSpan(
           text: 'Yes',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w900,
             color: Colors.black,
@@ -330,7 +329,7 @@ class CarOptinalDetails {
         ),
         TextSpan(
           text: ', Service History is Available',
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Colors.black,

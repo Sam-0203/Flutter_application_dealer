@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dealershub_/src/models/add car/car_details_model.dart';
 
 CarUpdateResponse carUpdateResponseFromJson(String str) =>
     CarUpdateResponse.fromJson(json.decode(str));
@@ -27,33 +28,12 @@ class CarUpdateResponse {
 
 class CarUpdateData {
   final List<String> updatedFields;
-  final UpdatedCar car;
+  final DealerCarDetailsDatum car;
 
   CarUpdateData({required this.updatedFields, required this.car});
 
   factory CarUpdateData.fromJson(Map<String, dynamic> json) => CarUpdateData(
     updatedFields: List<String>.from(json["updated_fields"].map((x) => x)),
-    car: UpdatedCar.fromJson(json["car"]),
-  );
-}
-
-class UpdatedCar {
-  final int id;
-  final String status;
-  final String manufacturingYear;
-  final String kmRange;
-
-  UpdatedCar({
-    required this.id,
-    required this.status,
-    required this.manufacturingYear,
-    required this.kmRange,
-  });
-
-  factory UpdatedCar.fromJson(Map<String, dynamic> json) => UpdatedCar(
-    id: json["id"],
-    status: json["status"],
-    manufacturingYear: json["manufacturing_year"],
-    kmRange: json["km_range"],
+    car: DealerCarDetailsDatum.fromJson(json["car"]),
   );
 }

@@ -2,11 +2,12 @@ import 'dart:async';
 import 'package:dealershub_/src/utils/route/route.dart';
 import 'package:dealershub_/src/utils/responsive/responsive_helper.dart';
 import 'package:dealershub_/src/utils/widgets/car_card.dart';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/utils/widgets/car_shimmer.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
+import 'package:dealershub_/src/views/home/Sidemenu.dart';
 import 'package:dealershub_/src/views/home/tabs/listofcars.dart';
 import 'package:dealershub_/src/views/home/tabs/myinvetory.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
 import 'package:provider/provider.dart';
 
 class HomeListOfCarsAndMyList extends StatefulWidget {
@@ -24,7 +25,7 @@ class _HomeListOfCarsAndMyListState extends State<HomeListOfCarsAndMyList> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 5), () {
       if (!mounted) return;
 
       Navigator.pushReplacement(
@@ -77,6 +78,22 @@ class _HomeScreenState extends State<HomeScreen>
   late TextEditingController _searchController;
   Timer? _debounce;
 
+  String _normalizedRole() {
+    final role = (widget.role ?? '').trim().toLowerCase();
+    if (role.contains('dealer')) return 'dealer';
+    if (role.contains('agent')) return 'agent';
+    return role;
+  }
+
+  String? _roleForNavigation() {
+    final normalizedRole = _normalizedRole();
+    if (normalizedRole.isNotEmpty) return normalizedRole;
+
+    final rawRole = widget.role?.trim();
+    if (rawRole == null || rawRole.isEmpty) return null;
+    return rawRole;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen>
       length: 2,
       vsync: this,
       initialIndex: widget.initialTab,
+      animationDuration: const Duration(milliseconds: 500),
     );
     _searchController = TextEditingController();
 
@@ -147,6 +165,75 @@ class _HomeScreenState extends State<HomeScreen>
     context.read<SearchViewModel>().search(query);
   }
 
+  void _clearSearchBar() {
+    if (_searchController.text.isNotEmpty) {
+      _searchController.clear();
+    }
+    _debounce?.cancel();
+    FocusScope.of(context).unfocus();
+    context.read<SearchViewModel>().search('');
+    context.read<MyInventrySearchViewModel>().search('');
+  }
+
+  Future<bool> _addToFavoritesByRole(int carId) async {
+    final resolvedRole = _normalizedRole();
+
+    if (resolvedRole == 'dealer') {
+      final favVM = context.read<AddToFavoriteViewModel>();
+      return favVM.addToFavorite(carId);
+    }
+
+    if (resolvedRole == 'agent') {
+      final favVM = context.read<AddFavCarsAgentsViewModel>();
+      return favVM.addToFavorite(carId);
+    }
+
+    // Fallback when role could not be inferred reliably.
+    final dealerVM = context.read<AddToFavoriteViewModel>();
+    final agentVM = context.read<AddFavCarsAgentsViewModel>();
+    final dealerSuccess = await dealerVM.addToFavorite(carId);
+    if (dealerSuccess) return true;
+
+    return agentVM.addToFavorite(carId);
+  }
+
+  Future<void> _handleSearchFavoriteTap(dynamic car) async {
+    if (car.isFavorite == true) {
+      return;
+    }
+
+    final addedSuccessfully = await _addToFavoritesByRole(car.id);
+    if (!mounted) return;
+
+    if (addedSuccessfully) {
+      setState(() {
+        car.isFavorite = true;
+      });
+    }
+  }
+
+  Future<void> _openFavoritesAndHandleBack() async {
+    final roleForNavigation = _roleForNavigation();
+    _clearSearchBar();
+    final result = await Navigator.pushNamed(
+      context,
+      myFavoriteCarsRoute,
+      arguments: {'role': roleForNavigation},
+    );
+
+    if (!mounted) return;
+
+    final shouldClearSearch = result is Map<String, dynamic>
+        ? result['clearSearch'] == true
+        : false;
+
+    if (shouldClearSearch) {
+      _clearSearchBar();
+    }
+
+    await context.read<ListOfCarsViewModel>().fetchingListOfCars();
+  }
+
   @override
   void dispose() {
     _searchFocus.dispose();
@@ -158,6 +245,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final normalizedRole = _normalizedRole();
+    final roleForNavigation = _roleForNavigation();
     final deviceType = ResponsiveHelper.getDeviceType(context);
     final bool isTabletOrDesktop = deviceType != DeviceType.mobile;
     final double contentMaxWidth = deviceType == DeviceType.desktop
@@ -177,13 +266,77 @@ class _HomeScreenState extends State<HomeScreen>
     final double agentActionIconSize = isTabletOrDesktop ? 24 : 28;
     final double agentControlsGap = isTabletOrDesktop ? 8 : 10;
 
-    debugPrint(widget.role);
+    debugPrint(roleForNavigation);
     return Scaffold(
+      drawer: SideBarMenu(
+        role: normalizedRole,
+        onFavoritesTap: _openFavoritesAndHandleBack,
+      ),
       body: SafeArea(
-        child: widget.role == 'dealer'
+        child: normalizedRole == 'dealer'
             ? Column(
                 children: [
                   /// 🔹 Top Section (Tabs + Actions)
+                  Row(
+                    children: [
+                      SizedBox(width: 15),
+
+                      /// ☰ Drawer Icon
+                      Builder(
+                        builder: (context) {
+                          return GestureDetector(
+                            child: Container(
+                              width: 45,
+                              height: 45,
+                              decoration: BoxDecoration(
+                                color: Color(0xffF47B39),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.menu,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                            onTap: () {
+                              Scaffold.of(context).openDrawer();
+                            },
+                          );
+                        },
+                      ),
+                      SizedBox(width: 5),
+                      Expanded(
+                        child: Container(
+                          height: dealerButtonSize,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TabBar(
+                            controller: _tabController,
+                            dividerColor: Colors.transparent,
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            indicator: BoxDecoration(
+                              color: const Color(0xffF47B39),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            labelStyle: TextStyle(
+                              fontSize: dealerTabLabelSize,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            labelColor: Colors.white,
+                            unselectedLabelColor: Colors.black,
+                            tabs: const [
+                              Tab(text: 'List of Cars'),
+                              Tab(text: 'My Inventory'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 15),
+                    ],
+                  ),
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: dealerTopHorizontalPadding,
@@ -192,80 +345,134 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Center(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                        child: Row(
+                        child: Column(
                           children: [
-                            /// Tabs
-                            Expanded(
-                              child: Container(
-                                height: dealerButtonSize,
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: TabBar(
-                                  controller: _tabController,
-                                  dividerColor: Colors.transparent,
-                                  indicatorSize: TabBarIndicatorSize.tab,
-                                  indicator: BoxDecoration(
-                                    color: const Color(0xffF47B39),
-                                    borderRadius: BorderRadius.circular(10),
+                            /// 🔍 Search Bar + Filter Button (Side by Side)
+                            Row(
+                              children: [
+                                /// Search Bar (Takes most space)
+                                AnimatedContainer(
+                                  duration: Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                  child: Expanded(
+                                    child: Container(
+                                      height: dealerSearchHeight,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: Colors.blue.shade200,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _searchController,
+                                              focusNode: _searchFocus,
+                                              textInputAction:
+                                                  TextInputAction.done,
+                                              onChanged: (_) => setState(() {}),
+                                              onSubmitted: (_) => FocusScope.of(
+                                                context,
+                                              ).unfocus(),
+                                              decoration: InputDecoration(
+                                                hintText: _selectedIndex == 0
+                                                    ? 'Search cars...'
+                                                    : 'Search inventory...',
+                                                border: InputBorder.none,
+                                                hintStyle: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w400,
+                                                  color: const Color.fromRGBO(
+                                                    59,
+                                                    59,
+                                                    59,
+                                                    1,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () {
+                                              if (_searchController
+                                                  .text
+                                                  .isNotEmpty) {
+                                                _searchController.clear();
+                                                setState(() {});
+                                              }
+                                              FocusScope.of(context).unfocus();
+                                            },
+                                            child: Icon(
+                                              _searchController.text.isNotEmpty
+                                                  ? Icons.close
+                                                  : Icons.search,
+                                              color: Colors.black,
+                                              size: 26,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  labelStyle: GoogleFonts.cairo(
-                                    fontSize: dealerTabLabelSize,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  labelColor: Colors.white,
-                                  unselectedLabelColor: Colors.black,
-                                  tabs: const [
-                                    Tab(text: 'List of Cars'),
-                                    Tab(text: 'My Inventory'),
-                                  ],
                                 ),
-                              ),
-                            ),
 
-                            const SizedBox(width: 10),
+                                const SizedBox(width: 10),
 
-                            /// Favorite Button
-                            if (_selectedIndex == 1)
-                              _buildActionButton(
-                                icon: Icons.favorite,
-                                size: dealerButtonSize,
-                                iconSize: dealerActionIconSize,
-                                onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    myfavoriteCarsRoute,
-                                    arguments: {'role': widget.role},
-                                  );
-                                },
-                              ),
+                                /// Filter Button
+                                if (_selectedIndex == 0)
+                                  AnimatedSwitcher(
+                                    duration: Duration(milliseconds: 300),
+                                    transitionBuilder: (child, animation) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: SizeTransition(
+                                          sizeFactor: animation,
+                                          axis: Axis.horizontal,
+                                          child: child,
+                                        ),
+                                      );
+                                    },
+                                    child: _searchController.text.isEmpty
+                                        ? Row(
+                                            children: [
+                                              _buildActionButton(
+                                                icon: Icons.filter_list_alt,
+                                                size: dealerSearchHeight,
+                                                iconSize: dealerActionIconSize,
+                                                onTap: () {
+                                                  _clearSearchBar();
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    filteringScreen,
+                                                    arguments:
+                                                        roleForNavigation,
+                                                  );
+                                                },
+                                              ),
 
-                            if (_selectedIndex == 1) const SizedBox(width: 10),
-
-                            /// Filter / Add Button
-                            _buildActionButton(
-                              icon: _selectedIndex == 0
-                                  ? Icons.filter_list_alt
-                                  : Icons.add,
-                              size: dealerButtonSize,
-                              iconSize: dealerActionIconSize,
-                              onTap: () {
-                                if (_selectedIndex == 0) {
-                                  Navigator.pushNamed(
-                                    context,
-                                    filteringScreen,
-                                    arguments: widget.role,
-                                  );
-                                } else {
-                                  Navigator.pushNamed(
-                                    context,
-                                    newCarEntryRoute,
-                                    arguments: widget.role,
-                                  );
-                                }
-                              },
+                                              // /// Favorite Button (only visible in My Inventory)
+                                              // if (_selectedIndex == 1) ...[
+                                              //   const SizedBox(width: 10),
+                                              //   _buildActionButton(
+                                              //     icon: Icons.bookmark,
+                                              //     size: dealerSearchHeight,
+                                              //     iconSize: dealerActionIconSize,
+                                              //     onTap:
+                                              //         _openFavoritesAndHandleBack,
+                                              //   ),
+                                              // ],
+                                            ],
+                                          )
+                                        : SizedBox.shrink(
+                                            key: ValueKey("empty"),
+                                          ),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -273,73 +480,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
 
-                  /// 🔍 Search Bar
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: dealerTopHorizontalPadding,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: contentMaxWidth),
-                        child: Container(
-                          height: dealerSearchHeight,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _searchController,
-                                  focusNode: _searchFocus,
-                                  textInputAction: TextInputAction.search,
-                                  onChanged: (_) => setState(() {}),
-                                  decoration: InputDecoration(
-                                    hintText: _selectedIndex == 0
-                                        ? 'Search cars...'
-                                        : 'Search inventory...',
-                                    border: InputBorder.none,
-                                    hintStyle: GoogleFonts.mulish(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w400,
-                                      color: const Color.fromRGBO(
-                                        59,
-                                        59,
-                                        59,
-                                        1,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              GestureDetector(
-                                onTap: () {
-                                  if (_searchController.text.isNotEmpty) {
-                                    _searchController.clear();
-                                    setState(() {});
-                                  }
-                                  FocusScope.of(context).unfocus();
-                                },
-                                child: Icon(
-                                  _searchController.text.isNotEmpty
-                                      ? Icons.close
-                                      : Icons.search,
-                                  color: Colors.black,
-                                  size: 26,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 5),
 
                   /// 🔹 Content Area
                   Expanded(
@@ -350,9 +491,10 @@ class _HomeScreenState extends State<HomeScreen>
                             ? _buildSearchResults()
                             : TabBarView(
                                 controller: _tabController,
+                                physics: const NeverScrollableScrollPhysics(),
                                 children: [
-                                  Listofcars(role: widget.role),
-                                  Myinvetory(role: widget.role),
+                                  Listofcars(role: roleForNavigation),
+                                  Myinvetory(role: roleForNavigation),
                                 ],
                               ),
                       ),
@@ -371,140 +513,160 @@ class _HomeScreenState extends State<HomeScreen>
                         constraints: BoxConstraints(maxWidth: contentMaxWidth),
                         child: Row(
                           children: [
-                            // 🔍 Search Field
-                            Expanded(
-                              child: Container(
-                                height: agentSearchHeight,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(
-                                    isTabletOrDesktop ? 12 : 14,
+                            /// ☰ Menu
+                            Builder(
+                              builder: (context) {
+                                return GestureDetector(
+                                  child: Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xffF47B39),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.menu,
+                                      color: Colors.white,
+                                      size: 30,
+                                    ),
                                   ),
-                                  border: Border.all(
-                                    color: Colors.blue.shade200,
+                                  onTap: () {
+                                    Scaffold.of(context).openDrawer();
+                                  },
+                                );
+                              },
+                            ),
+
+                            SizedBox(width: 10),
+
+                            /// 🔍 Search Field (auto expand)
+                            AnimatedContainer(
+                              duration: Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: Expanded(
+                                child: Container(
+                                  height: agentSearchHeight,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
                                   ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: _searchController,
-                                        textInputAction: TextInputAction.search,
-                                        focusNode: _searchFocus,
-                                        onChanged: (_) => setState(() {}),
-                                        decoration: InputDecoration(
-                                          hintText: 'Search cars...',
-                                          border: InputBorder.none,
-                                          hintStyle: GoogleFonts.mulish(
-                                            fontSize: isTabletOrDesktop
-                                                ? 15
-                                                : 16,
-                                            fontWeight: FontWeight.w400,
-                                            color: const Color.fromRGBO(
-                                              59,
-                                              59,
-                                              59,
-                                              1,
-                                            ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(
+                                      isTabletOrDesktop ? 12 : 14,
+                                    ),
+                                    border: Border.all(
+                                      color: Colors.blue.shade200,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _searchController,
+                                          focusNode: _searchFocus,
+                                          onChanged: (_) => setState(() {}),
+                                          decoration: InputDecoration(
+                                            hintText: 'Search cars...',
+                                            border: InputBorder.none,
                                           ),
-                                          focusedBorder: InputBorder.none,
-                                          enabledBorder: InputBorder.none,
                                         ),
                                       ),
-                                    ),
-
-                                    // Clear / Search Icon
-                                    GestureDetector(
-                                      onTap: () {
-                                        _searchController.clear();
-                                        setState(() {});
-                                        FocusScope.of(context).unfocus();
-                                      },
-                                      child: Icon(
-                                        _searchController.text.isNotEmpty
-                                            ? Icons.close
-                                            : Icons.search_rounded,
-                                        color: Colors.black,
-                                        size: agentSearchIconSize,
+                                      GestureDetector(
+                                        onTap: () {
+                                          if (_searchController
+                                              .text
+                                              .isNotEmpty) {
+                                            _searchController.clear();
+                                            setState(() {});
+                                          }
+                                          FocusScope.of(context).unfocus();
+                                        },
+                                        child: Icon(
+                                          _searchController.text.isNotEmpty
+                                              ? Icons.close
+                                              : Icons.search,
+                                          color: Colors.black,
+                                          size: 26,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
 
-                            SizedBox(width: agentControlsGap),
-
-                            // 🎯 Filter Button
-                            _buildActionButton(
-                              icon: Icons.filter_list_alt,
-                              size: agentButtonSize,
-                              iconSize: agentActionIconSize,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  filteringScreen,
-                                  arguments: widget.role,
+                            /// 🔥 ONLY SHOW WHEN SEARCH EMPTY
+                            AnimatedSwitcher(
+                              duration: Duration(milliseconds: 300),
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: SizeTransition(
+                                    sizeFactor: animation,
+                                    axis: Axis.horizontal,
+                                    child: child,
+                                  ),
                                 );
                               },
-                            ),
+                              child: _searchController.text.isEmpty
+                                  ? Row(
+                                      key: ValueKey("buttons"),
+                                      children: [
+                                        SizedBox(width: agentControlsGap),
 
-                            SizedBox(width: agentControlsGap),
-                            _buildActionButton(
-                              icon: Icons.favorite,
-                              size: agentButtonSize,
-                              iconSize: agentActionIconSize,
-                              onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  myfavoriteCarsRoute,
-                                  arguments: {'role': widget.role},
-                                );
-                              },
+                                        _buildActionButton(
+                                          icon: Icons.filter_list_alt,
+                                          size: agentButtonSize,
+                                          iconSize: agentActionIconSize,
+                                          onTap: () {
+                                            _clearSearchBar();
+                                            Navigator.pushNamed(
+                                              context,
+                                              filteringScreen,
+                                              arguments: roleForNavigation,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    )
+                                  : SizedBox.shrink(key: ValueKey("empty")),
                             ),
                           ],
                         ),
                       ),
                     ),
                   ),
+                  SizedBox(height: agentControlsGap),
                   Expanded(
                     child: Center(
                       child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: contentMaxWidth),
                         child: _searchController.text.isNotEmpty
                             ? _buildSearchResults()
-                            : Listofcars(role: widget.role),
+                            : Listofcars(role: roleForNavigation),
                       ),
                     ),
                   ),
                 ],
               ),
       ),
+
+      // floatingActionButton only for dealers on My Inventory tab
+      floatingActionButton: _selectedIndex == 1 && normalizedRole == 'dealer'
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  newCarEntryRoute,
+                  arguments: roleForNavigation,
+                );
+              },
+              backgroundColor: const Color(0xffF47B39),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
-
-  // KeyboardActionsConfig _buildConfig(BuildContext context) {
-  //   return KeyboardActionsConfig(
-  //     keyboardActionsPlatform: KeyboardActionsPlatform.ALL, // Better
-  //     keyboardBarColor: Colors.grey[200],
-  //     nextFocus: false,
-  //     actions: [
-  //       KeyboardActionsItem(
-  //         focusNode: _searchFocus,
-  //         toolbarButtons: [
-  //           (node) => DoneButton(
-  //             onTap: () {
-  //               node.unfocus();
-  //             },
-  //           ),
-  //         ],
-  //       ),
-  //     ],
-  //   );
-  // }
 
   Widget _buildSearchResults() {
     if (_tabController.index == 1) {
@@ -514,10 +676,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildListOfCarsSearchResults() {
+    final padding = ResponsiveHelper.getResponsivePadding(context);
+
     return Consumer<SearchViewModel>(
       builder: (context, searchVM, child) {
         if (searchVM.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: 5,
+            itemBuilder: (context, index) => const CarCardShimmer(),
+          );
         }
 
         if (searchVM.error != null) {
@@ -529,6 +696,9 @@ class _HomeScreenState extends State<HomeScreen>
         }
 
         return ListView.builder(
+          key: const PageStorageKey('list_of_cars_search'),
+          physics: const BouncingScrollPhysics(),
+          padding: padding,
           itemCount: searchVM.cars.length,
           itemBuilder: (context, index) {
             final car = searchVM.cars[index];
@@ -538,7 +708,7 @@ class _HomeScreenState extends State<HomeScreen>
               car: Car(
                 id: car.id,
                 title:
-                    "${car.brand.name} ${car.model.name} ${car.variant.name}",
+                    "${car.brand.name} ${car.models.name} ${car.variant.name}",
                 image: car.images.isNotEmpty ? car.images.first.imageUrl : '',
                 fuel: car.fuelType.name,
                 year: car.manufacturingYear,
@@ -548,6 +718,7 @@ class _HomeScreenState extends State<HomeScreen>
                 dealer: car.dealer.dealershipName,
                 city: car.dealer.city,
                 state: car.dealer.state,
+                carPostDate: car.dealer.postedDate,
               ),
               onTap: () {
                 Navigator.pushNamed(
@@ -565,9 +736,15 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 );
               },
+              onPressed: () async {
+                await _handleSearchFavoriteTap(car);
+              },
               icon: car.isFavorite
-                  ? const Icon(Icons.favorite, color: Color(0xffF47B39))
-                  : Icon(Icons.favorite_border, color: Colors.grey[800]),
+                  ? const Icon(Icons.bookmark, color: Color(0xffF47B39))
+                  : Icon(
+                      Icons.bookmark_border_outlined,
+                      color: Colors.grey[800],
+                    ),
             );
           },
         );
@@ -576,10 +753,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildMyInventorySearchResults() {
+    final padding = ResponsiveHelper.getResponsivePadding(context);
+
     return Consumer<MyInventrySearchViewModel>(
       builder: (context, searchVM, child) {
         if (searchVM.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return ListView.builder(
+            itemCount: 5,
+            itemBuilder: (context, index) => const CarCardShimmer(),
+          );
         }
 
         if (searchVM.error != null) {
@@ -591,6 +773,9 @@ class _HomeScreenState extends State<HomeScreen>
         }
 
         return ListView.builder(
+          key: const PageStorageKey('my_inventory_search'),
+          physics: const BouncingScrollPhysics(),
+          padding: padding,
           itemCount: searchVM.cars.length,
           itemBuilder: (context, index) {
             final car = searchVM.cars[index];
@@ -610,6 +795,7 @@ class _HomeScreenState extends State<HomeScreen>
                 dealer: car.dealer.dealershipName,
                 city: car.dealer.city,
                 state: car.dealer.state,
+                carPostDate: car.dealer.carPostDate,
               ),
               onTap: () {
                 Navigator.pushNamed(
@@ -627,9 +813,6 @@ class _HomeScreenState extends State<HomeScreen>
                   },
                 );
               },
-              icon: car.isFavorite
-                  ? const Icon(Icons.favorite, color: Color(0xffF47B39))
-                  : const Icon(Icons.favorite_border, color: Colors.black),
             );
           },
         );
@@ -646,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen>
               ? message!
               : 'Failed to load search results. Please check your internet connection and try again.',
           textAlign: TextAlign.center,
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 14,
             color: Colors.black54,
             fontWeight: FontWeight.w500,
@@ -666,7 +849,7 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(width: 5),
           Text(
             "No Cars Found.",
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: 16,
               color: Colors.grey,
               fontWeight: FontWeight.w500,
@@ -678,46 +861,51 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-// Reusable custom Done button
+// Reusable Done Button for Keyboard
 class DoneButton extends StatelessWidget {
   final VoidCallback onTap;
   const DoneButton({super.key, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text(
-          "Done",
-          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: Colors.blue,
         ),
       ),
+      child: const Text("Done"),
     );
   }
 }
 
+// Reusable custom Login button
 Widget _buildActionButton({
   required IconData icon,
   required VoidCallback onTap,
   double size = 56,
   double iconSize = 28,
 }) {
-  return GestureDetector(
-    onTap: onTap,
-    child: Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        color: const Color(0xffF47B39),
-        borderRadius: BorderRadius.circular(12),
+  return SizedBox(
+    height: size,
+    width: size,
+    child: TextButton(
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        backgroundColor: const Color(0xffF47B39),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
+      onPressed: onTap,
       child: Icon(icon, color: Colors.white, size: iconSize),
     ),
   );
 }
 
+// Reusable custom Login button
 Widget _showSuccessfulDialogbox(
   BuildContext context,
   String title,
@@ -751,7 +939,7 @@ Widget _showSuccessfulDialogbox(
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -764,7 +952,7 @@ Widget _showSuccessfulDialogbox(
           Text(
             message,
             textAlign: TextAlign.center,
-            style: GoogleFonts.mulish(fontSize: 16, color: Colors.white),
+            style: TextStyle(fontSize: 16, color: Colors.white),
           ),
         ],
       ),

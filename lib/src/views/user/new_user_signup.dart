@@ -4,14 +4,36 @@ import 'package:dealershub_/src/models/user%20models/requests/user_register_mode
 import 'package:dealershub_/src/utils/app_costants.dart';
 import 'package:dealershub_/src/utils/route/route.dart';
 import 'package:dealershub_/src/utils/widgets/input_field.dart';
-import 'package:dealershub_/src/viewmodels/auth_view_model.dart';
+import 'package:dealershub_/src/viewmodels/user_viewmodel.dart';
 import 'package:dealershub_/src/viewmodels/state_cities_viemodel.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:provider/provider.dart';
 import '../../utils/colors.dart';
 import '../../viewmodels/language_viewmodel.dart';
+
+class GstinFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final sanitized = newValue.text.toUpperCase().replaceAll(
+      RegExp(r'[^0-9A-Z]'),
+      '',
+    );
+
+    final trimmed = sanitized.length > 15
+        ? sanitized.substring(0, 15)
+        : sanitized;
+
+    return TextEditingValue(
+      text: trimmed,
+      selection: TextSelection.collapsed(offset: trimmed.length),
+    );
+  }
+}
 
 class NewUserSignUp extends StatefulWidget {
   const NewUserSignUp({
@@ -66,6 +88,23 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
 
   // UI State
   bool showOptionalFields = false;
+  bool _isDelayedNavigation = false;
+
+  Future<bool> _handleWillPop() async {
+    if (showOptionalFields) {
+      setState(() => showOptionalFields = false);
+      return false;
+    }
+    return true;
+  }
+
+  void _handleBackTap() {
+    if (showOptionalFields) {
+      setState(() => showOptionalFields = false);
+      return;
+    }
+    Navigator.pop(context);
+  }
 
   // Dropdown values
   String? selectedState;
@@ -138,6 +177,42 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
     setState(() {});
   }
 
+  String _getFriendlyError(String rawError) {
+    String message = rawError.trim();
+
+    // If the error already contains a friendly message from the service,
+    // return it verbatim.
+    if (message.isNotEmpty && !message.startsWith('Exception:')) {
+      return message;
+    }
+
+    // Attempt to parse "Exception: Registration failed: {...}" payload.
+    try {
+      if (message.contains('Registration failed:')) {
+        final jsonPart = message.split('Registration failed:').last.trim();
+        final decoded = jsonDecode(jsonPart);
+        if (decoded is Map<String, dynamic>) {
+          final serverMsg = decoded['message']?.toString();
+          if (serverMsg != null && serverMsg.isNotEmpty) {
+            final errors = decoded['errors'];
+            if (errors is Map<String, dynamic>) {
+              final details = errors.values
+                  .cast<List>()
+                  .expand((v) => v.cast<String>())
+                  .join(', ');
+              return details.isNotEmpty ? '$serverMsg: $details' : serverMsg;
+            }
+            return serverMsg;
+          }
+        }
+      }
+    } catch (_) {
+      // ignore parsing failures
+    }
+
+    return rawError;
+  }
+
   // <=== : _showError : ===>
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -149,7 +224,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
             Expanded(
               child: Text(
                 message,
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
                   color: Colors.white,
@@ -159,15 +234,45 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
           ],
         ),
         duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
         backgroundColor: Color(0xffF47B39),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   // <=== : _validateMandatoryFields : ===>
   bool _validateMandatoryFields() {
+    // Check if all mandatory fields are empty
+    bool allEmpty = true;
+
+    if (widget.roleType == "dealer" &&
+        _companyController.text.trim().isNotEmpty) {
+      allEmpty = false;
+    }
+    if (_fullNameController.text.trim().isNotEmpty) {
+      allEmpty = false;
+    }
+    if (_phoneController.text.trim().isNotEmpty) {
+      allEmpty = false;
+    }
+    if (_pincodeController.text.trim().isNotEmpty) {
+      allEmpty = false;
+    }
+    if (selectedState != null) {
+      allEmpty = false;
+    }
+    if (selectedCity != null) {
+      allEmpty = false;
+    }
+    if (selectedPreferdLanguage != null) {
+      allEmpty = false;
+    }
+
+    if (allEmpty) {
+      _showError('Please fill all the details');
+      return false;
+    }
+
+    // Individual field validations
     if (widget.roleType == "dealer") {
       if (_companyController.text.trim().isEmpty) {
         _showError('Please enter company name');
@@ -181,8 +286,8 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
     if (_fullNameController.text.trim().isEmpty) {
       _showError('Please enter full name');
       return false;
-    } else if (_fullNameController.text.trim().length < 4) {
-      _showError('Please enter Contact name morethan 5 characters ');
+    } else if (_fullNameController.text.trim().length < 3) {
+      _showError('Please enter Contact name morethan 3 characters ');
       return false;
     }
 
@@ -192,7 +297,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
     }
 
     if (_pincodeController.text.trim().length != 6) {
-      _showError('Please enter a valid 6-digit pincode');
+      _showError('Please enter your valid pincode');
       return false;
     }
 
@@ -214,10 +319,89 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
     return true; // ✅ everything valid
   }
 
+  // <=== : _validateOptionalFields : ===>
+  bool _validateOptionalFields() {
+    // GST validation (only for dealer and if entered)
+    if (widget.roleType == "dealer" && _gstController.text.trim().isNotEmpty) {
+      final gst = _gstController.text.trim().toUpperCase();
+      final gstRegex = RegExp(
+        r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$',
+      );
+      if (!gstRegex.hasMatch(gst)) {
+        _showError('Please enter a valid GST number');
+        return false;
+      }
+    }
+
+    // Email validation (if entered)
+    if (_emailController.text.trim().isNotEmpty) {
+      final email = _emailController.text.trim();
+      final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+      if (!emailRegex.hasMatch(email)) {
+        _showError('Please enter a valid email address');
+        return false;
+      }
+    }
+
+    // Alternate phone validation (if entered)
+    if (_alternatePhoneController.text.trim().isNotEmpty) {
+      final altPhone = _alternatePhoneController.text.trim();
+      if (altPhone.length != 10) {
+        _showError('Please enter a valid 10-digit alternate mobile number');
+        return false;
+      }
+    }
+
+    // Instagram URL validation (if entered)
+    if (_instagramController.text.trim().isNotEmpty) {
+      final instagram = _instagramController.text.trim();
+      final urlRegex = RegExp(
+        r'^(https?://)?([\da-z\.-]+)\.([a-z\.]{2,6})([/\w \.-]*)*\/?$',
+      );
+      if (!urlRegex.hasMatch(instagram)) {
+        _showError('Please enter a valid Instagram profile URL');
+        return false;
+      }
+    }
+
+    // Facebook URL validation (if entered)
+    if (_facebookController.text.trim().isNotEmpty) {
+      final facebook = _facebookController.text.trim();
+      final urlRegex = RegExp(
+        r'^(https?://)?([\da-z\.-]+)\.([a-z\.]{2,6})([/\w \.-]*)*\/?$',
+      );
+      if (!urlRegex.hasMatch(facebook)) {
+        _showError('Please enter a valid Facebook profile URL');
+        return false;
+      }
+    }
+
+    // Website URL validation (if entered)
+    if (_websiteController.text.trim().isNotEmpty) {
+      final website = _websiteController.text.trim();
+      final urlRegex = RegExp(
+        r'^(https?://)?([\da-z\.-]+)\.([a-z\.]{2,6})([/\w \.-]*)*\/?$',
+      );
+      if (!urlRegex.hasMatch(website)) {
+        _showError('Please enter a valid website URL');
+        return false;
+      }
+    }
+
+    return true; // ✅ optional fields valid or empty
+  }
+
   // <--------: SUBMIT SIGNUP :-------->
   Future<void> submitSignUp() async {
+    if (_isDelayedNavigation) return;
+
     // <=== : _validateMandatoryFields : ===>
     if (!_validateMandatoryFields()) {
+      return; // ⛔ stop here if invalid
+    }
+
+    // <=== : _validateOptionalFields : ===>
+    if (!_validateOptionalFields()) {
       return; // ⛔ stop here if invalid
     }
 
@@ -236,7 +420,9 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
       loginType: "mobile",
       roleType: widget.roleType,
       authType: "register",
-      gstNumber: widget.roleType == 'dealer' ? _gstController.text.trim() : '',
+      gstNumber: widget.roleType == 'dealer'
+          ? _gstController.text.trim().toUpperCase()
+          : '',
       email: _emailController.text.trim(),
       alternateMobileNumber: widget.roleType == 'dealer'
           ? _alternatePhoneController.text.isEmpty
@@ -252,8 +438,16 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
     debugPrint(jsonEncode(request.toJson()));
 
     final response = await vm.register(request);
+    if (!mounted) return;
 
     if (response != null) {
+      setState(() {
+        _isDelayedNavigation = true;
+      });
+
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+
       Navigator.pushNamed(
         context,
         otpScreenRoute,
@@ -263,32 +457,33 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
           "otp": response.data.otp,
         },
       );
+
+      if (!mounted) return;
+      setState(() {
+        _isDelayedNavigation = false;
+      });
     } else {
-      // Handle registration error
-      String errorMsg = vm.error is String
-          ? vm.error as String
-          : 'Registration failed';
-
-      debugPrint("Registration ErrorMsg: $errorMsg");
-
-      String? extractedMessage;
-      try {
-        // Assuming the format is "Exception: Registration failed: {json}"
-        if (errorMsg.contains('Registration failed:')) {
-          String jsonPart = errorMsg.split('Registration failed: ').last;
-          Map<String, dynamic> json = jsonDecode(jsonPart);
-          extractedMessage = json['message'];
-        }
-      } catch (e) {
-        debugPrint("Error parsing registration error message: $e");
+      if (mounted) {
+        setState(() {
+          _isDelayedNavigation = false;
+        });
       }
 
-      if (extractedMessage == 'User already exists') {
+      // Handle registration error
+      String rawErrorMsg = vm.error is String
+          ? vm.error as String
+          : 'Registration failed';
+      String friendlyError = _getFriendlyError(rawErrorMsg);
+
+      debugPrint("Registration ErrorMsg: $rawErrorMsg");
+      debugPrint("Friendly ErrorMsg: $friendlyError");
+
+      if (friendlyError.toLowerCase().contains('user already exists')) {
         debugPrint("Showing user already exists dialog");
         _userAlreadyExistsDialog();
       } else {
-        debugPrint("Showing generic error snackbar");
-        _showError(errorMsg);
+        debugPrint("Showing error snackbar");
+        _showError(friendlyError);
       }
     }
   }
@@ -314,8 +509,8 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
       builder: (_) => AlertDialog(
         backgroundColor: Colors.white,
         title: Text(
-          'Registration Failed',
-          style: GoogleFonts.inter(
+          'Dealers Hub',
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
             color: Colors.black,
@@ -327,7 +522,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
             const SizedBox(width: 5),
             Text(
               "User with this phone number \nalready exists.",
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
                 color: Color(0xffF47B39),
@@ -340,7 +535,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'OK',
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: Colors.blue,
@@ -353,51 +548,31 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
   }
 
   KeyboardActionsConfig _buildConfig(BuildContext context) {
+    KeyboardActionsItem buildActionItem(FocusNode focusNode) {
+      return KeyboardActionsItem(
+        focusNode: focusNode,
+        displayActionBar: true,
+        displayArrows: true,
+        displayDoneButton: true,
+        toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
+      );
+    }
+
     return KeyboardActionsConfig(
-      keyboardActionsPlatform: KeyboardActionsPlatform.IOS, // iOS
+      keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
       keyboardBarColor: Colors.grey[200],
       nextFocus: true, // Automatically move to next field
       actions: [
-        KeyboardActionsItem(
-          focusNode: _companyNameFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: node.unfocus)],
-        ),
-        KeyboardActionsItem(
-          focusNode: _fullNameFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _phoneNumFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _pincodeNumberFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _gstinNumberFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _emailFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _alterNumberFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _instaFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _facebookFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-        KeyboardActionsItem(
-          focusNode: _webFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
+        buildActionItem(_companyNameFocus),
+        buildActionItem(_fullNameFocus),
+        buildActionItem(_phoneNumFocus),
+        buildActionItem(_pincodeNumberFocus),
+        buildActionItem(_gstinNumberFocus),
+        buildActionItem(_emailFocus),
+        buildActionItem(_alterNumberFocus),
+        buildActionItem(_instaFocus),
+        buildActionItem(_facebookFocus),
+        buildActionItem(_webFocus),
       ],
     );
   }
@@ -414,55 +589,52 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
     debugPrint('States count: ${_vmState.stateslist.length}');
     debugPrint('Cities count: ${_vmCities.citieslist.length}');
 
-    return Scaffold(
-      backgroundColor: Colors.white,
+    return WillPopScope(
+      onWillPop: _handleWillPop,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: true,
 
-      appBar: showOptionalFields
-          ? AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              automaticallyImplyLeading: false,
-              title: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    showOptionalFields =
-                        false; // 👈 go back to mandatoryInputFields
-                  });
-                },
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 18,
-                      color: Colors.black,
-                    ),
-                    const SizedBox(width: 6),
-                    Text('Back', style: TextViews.Backbutton1.style),
-                  ],
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          title: GestureDetector(
+            onTap: _handleBackTap,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 18,
+                  color: Colors.black,
                 ),
-              ),
-            )
-          : null,
+                Text('Back', style: TextViews.Backbutton1.style),
+              ],
+            ),
+          ),
+        ),
 
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            children: [
-              signUpHeader(context, isDealer: widget.roleType == "dealer"),
-              const SizedBox(height: 30),
-              Expanded(
-                child: KeyboardActions(
-                  config: _buildConfig(context),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: showOptionalFields
-                        ? optionalInputFields()
-                        : mandatoryInputFields(),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              children: [
+                signUpHeader(context, isDealer: widget.roleType == "dealer"),
+                const SizedBox(height: 30),
+                Expanded(
+                  child: KeyboardActions(
+                    config: _buildConfig(context),
+                    disableScroll: false,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: showOptionalFields
+                          ? optionalInputFields()
+                          : mandatoryInputFields(),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -503,6 +675,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
               hintText: InputFieldPlaceholder.DealerCompanyName,
               maxLength: 50,
               focusNode: _companyNameFocus,
+              onlyLetters: true,
             ),
             const SizedBox(height: 16),
           ],
@@ -513,13 +686,14 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
             keyboardType: TextInputType.name,
             hintText: InputFieldPlaceholder.DealerFullName,
             maxLength: 30,
+            onlyLetters: true,
           ),
           const SizedBox(height: 16),
 
           UserInputField(
             focusNode: _phoneNumFocus,
             controller: _phoneController,
-            keyboardType: TextInputType.phone,
+            keyboardType: TextInputType.number,
             hintText: InputFieldPlaceholder.DealerNumber,
             maxLength: 10,
           ),
@@ -528,6 +702,16 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
           UserDropdownField<String>(
             hintText: InputFieldPlaceholder.StateSelection,
             value: selectedState,
+            enableSearch: true,
+            itemAsString: (value) {
+              if (value == null) return '';
+              if (_vmState.stateslist.isEmpty) return value;
+              final state = _vmState.stateslist.firstWhere(
+                (e) => e.id.toString() == value,
+                orElse: () => _vmState.stateslist.first,
+              );
+              return state.name.isNotEmpty ? state.name : value;
+            },
             items: _vmState.isLoading
                 ? [
                     DropdownMenuItem(
@@ -539,8 +723,8 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Feaching States....!',
-                              style: GoogleFonts.mulish(
+                              'Fetching States....!',
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -566,18 +750,13 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'No States....!',
-                              style: GoogleFonts.mulish(
+                              'No States available',
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          CircularProgressIndicator(
-                            color: Colors.blue,
-                            strokeWidth: 2,
-                          ),
-                          SizedBox(width: 10),
                         ],
                       ),
                     ),
@@ -596,10 +775,11 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                 selectedCity = null; // reset city
               });
 
-              // 🔥 FETCH CITIES BASED ON STATE
-              context.read<CitiesViemodel>().fetchCitiesByState(
-                int.parse(value!),
-              );
+              if (value != null) {
+                context.read<CitiesViemodel>().fetchCitiesByState(
+                  int.parse(value),
+                );
+              }
             },
           ),
 
@@ -609,7 +789,17 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
           UserDropdownField<String>(
             hintText: InputFieldPlaceholder.CitySelection,
             value: selectedCity,
-            items: _vmCities.isLoading
+            enableSearch: true,
+            itemAsString: (value) {
+              if (value == null) return '';
+              if (_vmCities.citieslist.isEmpty) return value;
+              final city = _vmCities.citieslist.firstWhere(
+                (e) => e.id.toString() == value,
+                orElse: () => _vmCities.citieslist.first,
+              );
+              return city.name.isNotEmpty ? city.name : value;
+            },
+            items: selectedState == null
                 ? [
                     DropdownMenuItem(
                       value: null,
@@ -620,8 +810,30 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Select City first....!', // display State name
-                              style: GoogleFonts.mulish(
+                              'Select State first',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]
+                : _vmCities.isLoading
+                ? [
+                    DropdownMenuItem(
+                      value: null,
+                      child: Row(
+                        children: [
+                          SizedBox(width: 10),
+                          Icon(Icons.info_outline, size: 30),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Loading cities...',
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -642,18 +854,13 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'No Cities for this $selectedStateName', // display State name
-                              style: GoogleFonts.mulish(
+                              'No cities for $selectedStateName',
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          CircularProgressIndicator(
-                            color: Colors.blue,
-                            strokeWidth: 2,
-                          ),
-                          SizedBox(width: 10),
                         ],
                       ),
                     ),
@@ -711,7 +918,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                   children: [
                     Text(
                       'Next',
-                      style: GoogleFonts.mulish(
+                      style: TextStyle(
                         fontSize: 18,
                         color: ButtonsColors.GetStartedButton,
                       ),
@@ -734,6 +941,9 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
 
   // -------- OPTIONAL INPUTS --------
   Widget optionalInputFields() {
+    final isSubmitting =
+        context.watch<AuthViewModel>().isLoading || _isDelayedNavigation;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,6 +958,7 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
               hintText: InputFieldPlaceholder.GSTIN,
               keyboardType: TextInputType.text,
               maxLength: 15,
+              inputFormatters: [GstinFormatter()],
             ),
             const SizedBox(height: 16),
           ],
@@ -807,8 +1018,17 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: submitSignUp,
-              child: TextViews.newUserSignUp,
+              onPressed: isSubmitting ? null : submitSignUp,
+              child: isSubmitting
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                  : TextViews.newUserSignUp,
             ),
           ),
         ],
@@ -827,10 +1047,10 @@ class DoneButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Text(
           "Done",
-          style: GoogleFonts.mulish(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Colors.blue,

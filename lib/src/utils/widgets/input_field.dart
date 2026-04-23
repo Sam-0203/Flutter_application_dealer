@@ -1,6 +1,4 @@
-import 'package:dealershub_/src/views/user/login.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 
 // Input Field - - - -
@@ -12,8 +10,11 @@ class UserInputField extends StatefulWidget {
   final Widget? suffixIcon;
   final int? maxLength;
   final bool onlyDigits;
+  final bool onlyLetters;
+  final bool showClearIcon;
   final FocusNode focusNode;
-  final List<IndianPhoneFormatter>? inputFormatters;
+  final List<TextInputFormatter>? inputFormatters;
+  final EdgeInsets scrollPadding;
 
   const UserInputField({
     super.key,
@@ -24,8 +25,11 @@ class UserInputField extends StatefulWidget {
     this.suffixIcon,
     this.maxLength,
     this.onlyDigits = false,
+    this.onlyLetters = false,
+    this.showClearIcon = false,
     required this.focusNode,
-    List<IndianPhoneFormatter> this.inputFormatters = const [],
+    this.inputFormatters = const [],
+    this.scrollPadding = const EdgeInsets.all(20),
   });
 
   @override
@@ -33,10 +37,53 @@ class UserInputField extends StatefulWidget {
 }
 
 class _UserInputFieldState extends State<UserInputField> {
-  final FocusNode phoneFocus = FocusNode();
+  bool _showClear = false;
 
   void _closeKeyboard() {
-    phoneFocus.unfocus();
+    widget.focusNode.unfocus();
+  }
+
+  void _updateClearIcon() {
+    if (!widget.showClearIcon) return;
+    final hasText = widget.controller?.text.isNotEmpty ?? false;
+    if (_showClear != hasText) {
+      setState(() {
+        _showClear = hasText;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showClearIcon) {
+      widget.controller?.addListener(_updateClearIcon);
+    }
+    _updateClearIcon();
+  }
+
+  @override
+  void didUpdateWidget(covariant UserInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final controllerChanged = oldWidget.controller != widget.controller;
+    final clearIconStateChanged =
+        oldWidget.showClearIcon != widget.showClearIcon;
+
+    if (controllerChanged || clearIconStateChanged) {
+      if (oldWidget.showClearIcon) {
+        oldWidget.controller?.removeListener(_updateClearIcon);
+      }
+      if (widget.showClearIcon) {
+        widget.controller?.addListener(_updateClearIcon);
+      }
+      _updateClearIcon();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller?.removeListener(_updateClearIcon);
+    super.dispose();
   }
 
   @override
@@ -45,6 +92,13 @@ class _UserInputFieldState extends State<UserInputField> {
       controller: widget.controller,
       keyboardType: widget.keyboardType,
       maxLength: widget.maxLength,
+      scrollPadding: widget.scrollPadding,
+      cursorColor: const Color.fromRGBO(41, 68, 135, 1),
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: const Color.fromRGBO(59, 59, 59, 1),
+      ),
       textInputAction: TextInputAction.done,
       onEditingComplete: _closeKeyboard,
       focusNode: widget.focusNode,
@@ -54,11 +108,17 @@ class _UserInputFieldState extends State<UserInputField> {
               if (widget.maxLength != null)
                 LengthLimitingTextInputFormatter(widget.maxLength),
             ]
-          : null,
+          : widget.onlyLetters
+          ? [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+              if (widget.maxLength != null)
+                LengthLimitingTextInputFormatter(widget.maxLength),
+            ]
+          : widget.inputFormatters,
       decoration: InputDecoration(
         fillColor: Colors.white,
         hintText: widget.hintText,
-        hintStyle: GoogleFonts.mulish(
+        hintStyle: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w400,
           color: Color.fromRGBO(59, 59, 59, 1),
@@ -69,7 +129,15 @@ class _UserInputFieldState extends State<UserInputField> {
         ),
         counterText: '',
         prefixIcon: widget.prefixIcon,
-        suffixIcon: widget.suffixIcon,
+        suffixIcon: widget.showClearIcon && _showClear
+            ? GestureDetector(
+                onTap: () {
+                  widget.controller?.clear();
+                  _updateClearIcon();
+                },
+                child: const Icon(Icons.clear, color: Colors.black45, size: 20),
+              )
+            : widget.suffixIcon,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -92,6 +160,8 @@ class UserDropdownField<T> extends StatelessWidget {
   final ValueChanged<T?> onChanged;
   final Color? fillColor;
   final EdgeInsetsGeometry? contentPadding;
+  final bool enableSearch;
+  final String Function(T? value)? itemAsString;
 
   const UserDropdownField({
     super.key,
@@ -101,6 +171,8 @@ class UserDropdownField<T> extends StatelessWidget {
     required this.hintText,
     this.fillColor,
     this.contentPadding,
+    this.enableSearch = false,
+    this.itemAsString,
   });
 
   @override
@@ -117,45 +189,142 @@ class UserDropdownField<T> extends StatelessWidget {
                 ),
               )
               .child;
+    final selectedText = itemAsString != null
+        ? itemAsString!(value)
+        : (selectedLabel is Text
+              ? selectedLabel.data ?? ''
+              : value?.toString() ?? '');
 
     return InkWell(
       onTap: () async {
+        final searchController = TextEditingController();
+
         final picked = await showModalBottomSheet<T>(
           context: context,
+          isScrollControlled: true,
           backgroundColor: const Color.fromRGBO(218, 218, 218, 1),
           builder: (context) {
             return SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+              child: StatefulBuilder(
+                builder: (context, setModalState) {
+                  List<DropdownMenuItem<T>> filteredItems = items;
+
+                  if (enableSearch) {
+                    final query = searchController.text.trim().toLowerCase();
+                    if (query.isNotEmpty) {
+                      filteredItems = items.where((item) {
+                        final text = itemAsString != null
+                            ? itemAsString!(item.value)
+                            : (item.child is Text
+                                  ? (item.child as Text).data ?? ''
+                                  : item.value?.toString() ?? '');
+                        return text.toLowerCase().contains(query);
+                      }).toList();
+                    }
+                  }
+
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                  ),
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        return ListTile(
-                          title: item.child,
-                          onTap: () {
-                            Navigator.of(context).pop(item.value);
-                          },
-                        );
-                      },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        if (enableSearch) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 8.0,
+                            ),
+                            child: TextField(
+                              controller: searchController,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Search $hintText',
+                                hintStyle: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.black45,
+                                ),
+                                suffixIcon: searchController.text.isNotEmpty
+                                    ? GestureDetector(
+                                        onTap: () {
+                                          searchController.clear();
+                                          setModalState(() {});
+                                        },
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Color(0xFF8A93AB),
+                                          size: 20,
+                                        ),
+                                      )
+                                    : null,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFBECDFF),
+                                    width: 1.4,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF2C3E8F),
+                                    width: 1.6,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                              onChanged: (_) => setModalState(() {}),
+                            ),
+                          ),
+                        ],
+                        Flexible(
+                          child: filteredItems.isEmpty
+                              ? Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Text('No results found.'),
+                                )
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  itemCount: filteredItems.length,
+                                  separatorBuilder: (_, __) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) {
+                                    final item = filteredItems[index];
+                                    return ListTile(
+                                      title: item.child,
+                                      onTap: () {
+                                        Navigator.of(context).pop(item.value);
+                                      },
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             );
           },
@@ -166,7 +335,7 @@ class UserDropdownField<T> extends StatelessWidget {
         isEmpty: value == null,
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: GoogleFonts.mulish(
+          hintStyle: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color.fromRGBO(59, 59, 59, 1),
@@ -202,14 +371,15 @@ class UserDropdownField<T> extends StatelessWidget {
                   Expanded(
                     child: selectedLabel is Text
                         ? Text(
-                            (selectedLabel).data ?? '',
-                            style: GoogleFonts.mulish(fontSize: 16),
+                            selectedText,
+                            style: TextStyle(fontSize: 16),
                             overflow: TextOverflow.ellipsis,
                           )
-                        : Text(
-                            value?.toString() ?? '',
-                            style: GoogleFonts.mulish(fontSize: 16),
-                          ),
+                        : selectedLabel ??
+                              Text(
+                                selectedText,
+                                style: TextStyle(fontSize: 16),
+                              ),
                   ),
                 ],
               ),
@@ -217,17 +387,3 @@ class UserDropdownField<T> extends StatelessWidget {
     );
   }
 }
-
-// String? selectedRole;
-
-// UserDropdownField<String>(
-//   hintText: 'Select role',
-//   value: selectedRole,
-//   items: const [
-//     DropdownMenuItem(value: 'Dealer', child: Text('Dealer')),
-//     DropdownMenuItem(value: 'Agent', child: Text('Agent')),
-//   ],
-//   onChanged: (value) {
-//     selectedRole = value;
-//   },
-// );

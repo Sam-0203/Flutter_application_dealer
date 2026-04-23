@@ -1,5 +1,6 @@
 import 'package:dealershub_/src/models/regester%20forms/languages_model.dart';
 import 'package:dealershub_/src/services/user_service.dart';
+import 'package:dealershub_/src/utils/helper/error_message_helper.dart';
 import 'package:flutter/material.dart';
 
 class LanguageViewModel extends ChangeNotifier {
@@ -27,7 +28,7 @@ class LanguageViewModel extends ChangeNotifier {
         print('Error: $error');
       }
     } catch (e) {
-      error = e.toString();
+      error = ErrorMessageHelper.userMessage(e);
       print('Exception: $error');
     }
 

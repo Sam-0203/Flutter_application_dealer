@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:dealershub_/src/utils/app_costants.dart';
-import 'package:dealershub_/src/viewmodels/auth_view_model.dart';
+import 'package:dealershub_/src/viewmodels/user_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:provider/provider.dart';
 import '../../models/user models/requests/login_request.dart';
@@ -26,48 +25,49 @@ class UserLoginScreen extends StatefulWidget {
 }
 
 class IndianPhoneFormatter extends TextInputFormatter {
+  String _formatIndianMobile(String digits) {
+    try {
+      if (digits.length <= 5) {
+        return digits;
+      }
+      return '${digits.substring(0, 5)} ${digits.substring(5)}';
+    } catch (e) {
+      debugPrint('Error in _formatIndianMobile: $e');
+      return digits;
+    }
+  }
+
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    // If empty, allow empty (so hint shows)
-    if (newValue.text.isEmpty) {
-      return newValue;
-    }
-
-    // If user starts typing digits, prepend +91
-    if (!newValue.text.startsWith('+91')) {
-      final digitsOnly = newValue.text.replaceAll(RegExp(r'\D'), '');
-
-      if (digitsOnly.isEmpty) {
-        return oldValue;
+    try {
+      var digitsOnly = newValue.text.replaceAll(RegExp(r'\D'), '');
+      if (digitsOnly.startsWith('91') && digitsOnly.length > 10) {
+        digitsOnly = digitsOnly.substring(2);
       }
-
-      final text = '+91$digitsOnly';
 
       if (digitsOnly.length > 10) {
         return oldValue;
       }
 
+      if (digitsOnly.isEmpty) {
+        return const TextEditingValue(
+          text: '',
+          selection: TextSelection.collapsed(offset: 0),
+        );
+      }
+
+      final formatted = _formatIndianMobile(digitsOnly);
       return TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
       );
-    }
-
-    // After +91, allow only digits
-    final number = newValue.text.substring(3);
-
-    if (!RegExp(r'^[0-9]*$').hasMatch(number)) {
+    } catch (e) {
+      debugPrint('Error in formatEditUpdate: $e');
       return oldValue;
     }
-
-    if (number.length > 10) {
-      return oldValue;
-    }
-
-    return newValue;
   }
 }
 
@@ -75,6 +75,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
   final TextEditingController _loginController = TextEditingController();
 
   late FocusNode _phoneFocus;
+  bool _isDelayingNavigation = false;
 
   @override
   void initState() {
@@ -89,90 +90,174 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
     super.dispose();
   }
 
+  String _uiErrorMessage(String? message) {
+    try {
+      if (message == null || message.trim().isEmpty) {
+        return 'Failed to send OTP';
+      }
+      return message.trim();
+    } catch (e) {
+      debugPrint('Error in _uiErrorMessage: $e');
+      return 'Failed to send OTP';
+    }
+  }
+
   Future<void> _handleSendOTP() async {
     final vm = context.read<LoginViewModel>();
+    try {
+      final input = _loginController.text.trim();
 
-    final input = _loginController.text.trim();
+      if (input.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter your mobile number'),
+            backgroundColor: Color(0xffF47B39),
+          ),
+        );
+        return;
+      }
 
-    if (input.isEmpty) {
+      // Accept +91XXXXXXXXXX (or plain 10 digits) and validate only 10 digits after +91.
+      final normalizedInput = input.startsWith('+91')
+          ? input.substring(3)
+          : input;
+      final mobileNumber = normalizedInput.replaceAll(RegExp(r'\D'), '');
+      final isPhone = RegExp(r'^[0-9]{10}$').hasMatch(mobileNumber);
+
+      if (!isPhone) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid 10-digit mobile number'),
+            backgroundColor: Color(0xffF47B39),
+          ),
+        );
+        return;
+      }
+
+      final request = LoginRequestModel(
+        mobile: '+91$mobileNumber',
+        loginType: 'mobile',
+        roleType: widget.roleType,
+        authType: widget.authType,
+      );
+
+      // 🔥 PRINT SUBMITTED DATA
+      debugPrint("📤 LOGIN REQUEST DATA:");
+      debugPrint(request.toJson().toString());
+
+      // 🔥 PRINT SUBMITTED DATA (POST BODY)
+      debugPrint("📤 LOGIN POST DATA:");
+      debugPrint(jsonEncode(request.toJson()));
+
+      debugPrint('Sending OTP to Mobile: +91$mobileNumber');
+      final response = await vm.login(request);
+
+      if (response == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_uiErrorMessage(vm.error)),
+            backgroundColor: const Color(0xffF47B39),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _isDelayingNavigation = true;
+      });
+
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+
+      Navigator.pushNamed(
+        context,
+        otpScreenRoute,
+        arguments: {'response': response, 'value': request.mobile},
+      );
+    } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter your mobile number'),
+          content: Text('Something went wrong. Please try again.'),
           backgroundColor: Color(0xffF47B39),
         ),
       );
-      return;
+    } finally {
+      if (mounted && _isDelayingNavigation) {
+        setState(() {
+          _isDelayingNavigation = false;
+        });
+      }
     }
-
-    // ✅ Mobile number validation (10 digits)
-    bool isPhone = RegExp(r'^[0-9]{10}$').hasMatch(input);
-
-    if (!isPhone) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid 10-digit mobile number'),
-          backgroundColor: Color(0xffF47B39),
-        ),
-      );
-      return;
-    }
-
-    final request = LoginRequestModel(
-      mobile: '+91$input',
-      loginType: 'mobile',
-      roleType: widget.roleType,
-      authType: widget.authType,
-    );
-
-    // 🔥 PRINT SUBMITTED DATA
-    debugPrint("📤 LOGIN REQUEST DATA:");
-    debugPrint(request.toJson().toString());
-
-    // 🔥 PRINT SUBMITTED DATA (POST BODY)
-    debugPrint("📤 LOGIN POST DATA:");
-    debugPrint(jsonEncode(request.toJson()));
-
-    print('Sending OTP to Mobile: $input');
-    final response = await vm.login(request);
-
-    // print("response$response");
-
-    Navigator.pushNamed(
-      context,
-      otpScreenRoute,
-      arguments: {'response': response, 'value': input},
-    );
   }
 
   KeyboardActionsConfig _buildConfig(BuildContext context) {
-    return KeyboardActionsConfig(
-      keyboardActionsPlatform: KeyboardActionsPlatform.IOS, // iOS + Android
-      keyboardBarColor: Colors.grey[200],
-      nextFocus: true, // Automatically move to next field
-      actions: [
-        KeyboardActionsItem(
-          focusNode: _phoneFocus,
-          toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
-        ),
-      ],
-    );
+    try {
+      return KeyboardActionsConfig(
+        keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
+        keyboardBarColor: Colors.grey[200],
+        nextFocus: false,
+        actions: [
+          KeyboardActionsItem(
+            focusNode: _phoneFocus,
+            toolbarButtons: [(node) => DoneButton(onTap: () => node.unfocus())],
+          ),
+        ],
+      );
+    } catch (e) {
+      debugPrint('Error in _buildConfig: $e');
+      return KeyboardActionsConfig(
+        keyboardActionsPlatform: KeyboardActionsPlatform.ALL,
+        keyboardBarColor: Colors.grey[200],
+        nextFocus: false,
+        actions: [],
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     debugPrint('login page ${widget.authType}');
+    final loginVM = context.watch<LoginViewModel>();
+    final bool isBusy = loginVM.isLoading || _isDelayingNavigation;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        title: GestureDetector(
+          onTap: () => Navigator.pop(context, true),
+          child: Row(
+            children: [
+              Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+              Text(
+                'Back',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: KeyboardActions(
           config: _buildConfig(context),
+          disableScroll: true,
           child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(height: 24),
+                // const SizedBox(height: 24),
                 // Title image
                 Image.asset(
                   'assets/placeholders/LoginText.png',
@@ -191,9 +276,23 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   controller: _loginController,
                   focusNode: _phoneFocus,
                   keyboardType: TextInputType.number,
-                  // onlyDigits: true,
-                  maxLength: 10, // +91 + 10 digits
+                  scrollPadding: const EdgeInsets.only(bottom: 220),
+                  maxLength: 11, // 12345 67890
                   hintText: InputFieldPlaceholder.LoginInputNumber,
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 8),
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(
+                        '+91',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: const Color.fromRGBO(59, 59, 59, 1),
+                        ),
+                      ),
+                    ),
+                  ),
                   inputFormatters: [IndianPhoneFormatter()],
                 ),
 
@@ -209,30 +308,44 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: _handleSendOTP,
-                    child: InputFieldPlaceholder.logSignIn,
+                    onPressed: isBusy ? null : _handleSendOTP,
+                    child: isBusy
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.4,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : InputFieldPlaceholder.logSignIn,
                   ),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 GestureDetector(
                   onTap: () {
                     Navigator.pushNamed(
                       context,
                       Userrole,
-                      arguments: {'auth_type': 'register'},
+                      arguments: {
+                        'auth_type': 'register',
+                        'appbar_hide': 'yes',
+                      },
                     );
                   },
                   child: Text.rich(
                     TextSpan(
                       text: "Don’t have an account? 👉",
-                      style: GoogleFonts.mulish(
+                      style: TextStyle(
                         color: Colors.black54,
                         fontSize: 14,
                       ),
                       children: [
                         TextSpan(
                           text: "Sign up",
-                          style: GoogleFonts.mulish(
+                          style: TextStyle(
                             color: Colors.blue,
                             fontWeight: FontWeight.bold,
                           ),
@@ -259,14 +372,11 @@ class DoneButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text(
-          "Done",
-          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-        ),
+    return TextButton(
+      onPressed: onTap,
+      child: Text(
+        "Done",
+        style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
       ),
     );
   }

@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'package:dealershub_/src/models/add%20car/PostCarRequestModel.dart';
 import 'package:dealershub_/src/utils/route/route.dart';
-import 'package:dealershub_/src/viewmodels/add_car_view_model.dart';
+import 'package:dealershub_/src/viewmodels/add_car_viewmodel.dart';
 import 'package:dealershub_/src/utils/responsive/responsive_helper.dart';
 import '../../../utils/helper/type_converters.dart';
 import 'package:share_plus/share_plus.dart';
@@ -8,9 +9,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class CarDetailsReview extends StatefulWidget {
@@ -76,9 +74,59 @@ Color _getChipTextColor(Color bgColor) {
 class _CarDetailsReviewState extends State<CarDetailsReview> {
   final PageController _pageController = PageController(viewportFraction: 1.0);
   int _currentIndex = 0;
+  bool _isTogglingFavorite = false;
+  bool _isPublished = false;
+
+  bool _statusToPublished(dynamic value) {
+    final normalized = value?.toString().trim().toLowerCase() ?? '';
+    return normalized == 'active' ||
+        normalized == 'published' ||
+        normalized == 'true' ||
+        normalized == '1';
+  }
+
+  String get _selectedStatus => _isPublished ? 'active' : 'inactive';
+
+  void _goToBasicEditScreen() {
+    final navigator = Navigator.of(context);
+
+    // New-car flow stack: NewCarEntry -> OptionalDetails -> Review
+    navigator.pop();
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
+  String? get _roleForNavigation {
+    final role = (widget.role ?? '').trim().toLowerCase();
+    if (role.contains('dealer')) return 'dealer';
+    if (role.contains('agent')) return 'agent';
+
+    final rawRole = widget.role?.trim();
+    if (rawRole == null || rawRole.isEmpty) return null;
+    return rawRole;
+  }
+
+  bool get _isAgentRole {
+    final role = (widget.role ?? '').trim().toLowerCase();
+    return role.contains('agent');
+  }
+
+  void _showShareError(String message) {
+    if (!mounted || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xffF47B39),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _isPublished = _statusToPublished(widget.carData['status']);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       debugPrint(
@@ -272,6 +320,30 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
     return featureCreatedBy == carOwnerId && featureCarId == currentCarId;
   }
 
+  String _carTitle(dynamic apiCar, Map<String, dynamic> previewData) {
+    final String apiMake = (apiCar?.brand?.name?.toString() ?? '').trim();
+    String apiModel = '';
+    try {
+      apiModel = (apiCar?.models?.name?.toString() ?? '').trim();
+    } catch (_) {}
+    if (apiModel.isEmpty) {
+      try {
+        apiModel = (apiCar?.model?.name?.toString() ?? '').trim();
+      } catch (_) {}
+    }
+    final String previewMake = (previewData['make']?.toString() ?? '').trim();
+    final String previewModel = (previewData['model']?.toString() ?? '').trim();
+
+    final String make = apiMake.isNotEmpty ? apiMake : previewMake;
+    final String model = apiModel.isNotEmpty ? apiModel : previewModel;
+
+    final String title = [
+      make,
+      model,
+    ].where((part) => part.isNotEmpty).join(' - ');
+    return title.isNotEmpty ? title : 'No data';
+  }
+
   @override
   Widget build(BuildContext context) {
     // To hide APPBAR and BottomSheet
@@ -307,6 +379,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
 
     Future<void> postCar(BuildContext context) async {
       final vm = context.read<PostCarViewModel>();
+      carData['status'] = _selectedStatus;
 
       final model = PostCarRequestModel(
         brandId: toInt(carData['make']),
@@ -322,7 +395,9 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         kmRange: toStringValue(carData['kilometers']),
 
         insuranceValidity: toStringValue(carData['insurance']),
-        serviceHistory: toStringValue(carData['serviceHistory']),
+        serviceHistory: toStringValue(
+          carData['serviceHistory'] ?? carData['service_history'],
+        ),
 
         safetyFeatureIds: toIntList(carData['safety_feature_ids']),
         comfortFeatureIds: toIntList(carData['comfort_feature_ids']),
@@ -345,6 +420,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         images: (carData['images'] as List? ?? [])
             .map((e) => File(e.toString()))
             .toList(),
+        status: _selectedStatus,
       );
 
       debugPrint('Images for post : ${model.images}');
@@ -358,7 +434,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
           context,
           homeScreenRoute,
           (route) => false,
-          arguments: {'role': widget.role, 'showSuccessDialog': true},
+          arguments: {'role': _roleForNavigation, 'showSuccessDialog': true},
         );
       } else {
         debugPrint(' Error : ${vm.errorMessage}');
@@ -428,175 +504,59 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         '';
     final String agentDealerCity =
         apiCar?.dealer.city.toString() ?? previewData['city']?.toString() ?? '';
-
     debugPrint(
       'arguments: showAppBar and showBottomButtons ${ModalRoute.of(context)?.settings.arguments}',
     );
 
     // <=== : SHARE CAR FUNCTION : ===>
     Future<void> shareCarWithImage() async {
-      final apiCar = context.read<SingleCarDetailsViewModel>().singleCar;
-
-      final String brand = apiCar?.brand.name?.toString() ?? '';
-      final String model = apiCar?.model.name?.toString() ?? '';
-      final String variant = apiCar?.variant.name?.toString() ?? '';
-      final String fuel = apiCar?.fuelType.name?.toString() ?? '';
-      final String year = apiCar?.manufacturingYear?.toString() ?? '';
-      final String km = apiCar?.kmRange?.toString() ?? '';
-      final String dealer =
-          apiCar?.dealer.dealershipName?.toString() ?? agentDealerName;
-      final String city = apiCar?.dealer.city?.toString() ?? agentDealerCity;
-
-      final title = [
-        brand,
-        model,
-        variant,
-      ].where((e) => e.trim().isNotEmpty).join(' ');
-      final meta = [
-        year,
-        fuel,
-        km,
-      ].where((e) => e.trim().isNotEmpty).join(' • ');
-      final dealerLine = [
-        dealer,
-        city,
-      ].where((e) => e.trim().isNotEmpty).join(', ');
-      final shareText =
-          [
-            title,
-            meta,
-            dealerLine,
-          ].where((e) => e.trim().isNotEmpty).join('\n').trim().isEmpty
-          ? 'Check out this car listing'
-          : [
-              title,
-              meta,
-              dealerLine,
-            ].where((e) => e.trim().isNotEmpty).join('\n').trim();
-
-      final imagePath = imagePaths.isNotEmpty ? imagePaths.first : '';
-      final imageUri = Uri.tryParse(imagePath);
-
-      Uint8List? bytes;
-      if (imagePath.isNotEmpty && imageUri != null) {
-        try {
-          if (imagePath.startsWith('http://') ||
-              imagePath.startsWith('https://')) {
-            final response = await http.get(imageUri);
-            if (response.statusCode >= 200 && response.statusCode < 300) {
-              bytes = response.bodyBytes;
-            }
-          } else {
-            final file = File(imagePath);
-            if (await file.exists()) {
-              bytes = await file.readAsBytes();
-            }
-          }
-        } catch (e) {
-          debugPrint('Image fetch for sharing failed: $e');
-        }
-      }
-
-      final box = context.findRenderObject() as RenderBox?;
-      final shareOrigin = box != null && box.attached
-          ? box.localToGlobal(Offset.zero) & box.size
-          : null;
-
-      if (bytes == null || bytes.isEmpty) {
-        if (shareOrigin != null) {
-          await Share.share(shareText, sharePositionOrigin: shareOrigin);
-        } else {
-          await Share.share(shareText);
-        }
-        return;
-      }
-
       try {
-        final codec = await ui.instantiateImageCodec(bytes);
-        final frame = await codec.getNextFrame();
-        final carImage = frame.image;
+        final apiCar = context.read<SingleCarDetailsViewModel>().singleCar;
 
-        final recorder = ui.PictureRecorder();
-        final canvas = Canvas(recorder);
-        final paint = Paint();
+        final String brand = apiCar?.brand.name.toString() ?? '';
+        final String model = apiCar?.models.name.toString() ?? '';
+        final String variant = apiCar?.variant.name.toString() ?? '';
+        final String fuel = apiCar?.fuelType.name.toString() ?? '';
+        final String year = apiCar?.manufacturingYear.toString() ?? '';
+        final String km = apiCar?.kmRange.toString() ?? '';
+        final String dealer =
+            apiCar?.dealer.dealershipName.toString() ?? agentDealerName;
+        final String city = apiCar?.dealer.city.toString() ?? agentDealerCity;
 
-        const width = 1080.0;
-        const height = 1350.0;
+        final String detailsText = [
+          [brand, model, variant].where((v) => v.trim().isNotEmpty).join(' '),
+          year.isNotEmpty ? '$year • $fuel • $km' : '',
+          dealer.isNotEmpty ? '$dealer, $city' : city,
+        ].where((e) => e.trim().isNotEmpty).join('\n');
 
-        // White background
-        paint.color = Colors.white;
-        canvas.drawRect(Rect.fromLTWH(0, 0, width, height), paint);
+        final String appName = 'Dealershub';
+        final String playStoreUrl =
+            'https://play.google.com/store/apps/details?id=com.dealershub.app';
 
-        // Draw car image
-        final imageRect = Rect.fromLTWH(0, 0, width, 800);
-        paintImage(
-          canvas: canvas,
-          rect: imageRect,
-          image: carImage,
-          fit: BoxFit.cover,
-        );
+        final String shareText = '$detailsText\n$appName\n$playStoreUrl'.trim();
 
-        // Gradient overlay
-        final gradient = Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
-          ).createShader(imageRect);
+        final String imagePath = imagePaths.isNotEmpty ? imagePaths.first : '';
+        final String? shareImagePath = await _resolveShareImagePath(imagePath);
 
-        canvas.drawRect(imageRect, gradient);
+        if (!mounted || !context.mounted) return;
 
-        // Text style
-        final textPainter = TextPainter(textDirection: TextDirection.ltr);
+        final RenderBox? box = context.findRenderObject() as RenderBox?;
+        final Rect shareOrigin = (box != null && box.attached)
+            ? (box.localToGlobal(Offset.zero) & box.size)
+            : Rect.zero;
 
-        final textSpan = TextSpan(
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 60,
-            fontWeight: FontWeight.bold,
-          ),
-          text: brand,
-        );
-
-        textPainter.text = textSpan;
-        textPainter.layout(maxWidth: width - 80);
-        textPainter.paint(canvas, const Offset(40, 850));
-
-        final detailsPainter = TextPainter(
-          textDirection: TextDirection.ltr,
-          text: TextSpan(
-            style: const TextStyle(color: Colors.grey, fontSize: 45),
-            text: "$year • $fuel • $km\n$dealer",
-          ),
-        );
-
-        detailsPainter.layout(maxWidth: width - 80);
-        detailsPainter.paint(canvas, const Offset(40, 950));
-
-        final picture = recorder.endRecording();
-        final img = await picture.toImage(width.toInt(), height.toInt());
-        final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
-
-        final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/car_share.png');
-        await file.writeAsBytes(pngBytes!.buffer.asUint8List());
-
-        if (shareOrigin != null) {
+        if (shareImagePath != null) {
           await Share.shareXFiles(
-            [XFile(file.path)],
+            [XFile(shareImagePath)],
             text: shareText,
             sharePositionOrigin: shareOrigin,
           );
         } else {
-          await Share.shareXFiles([XFile(file.path)], text: shareText);
+          await Share.share(shareText, sharePositionOrigin: shareOrigin);
         }
       } catch (e) {
-        debugPrint("Share Error: $e");
-        if (shareOrigin != null) {
-          await Share.share(shareText, sharePositionOrigin: shareOrigin);
-        } else {
-          await Share.share(shareText);
-        }
+        debugPrint('Share failed: $e');
+        _showShareError('Unable to share this car right now.');
       }
     }
 
@@ -612,7 +572,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
               elevation: 0,
               automaticallyImplyLeading: false,
               title: GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pop(context, true),
                 child: Row(
                   children: [
                     Icon(
@@ -620,10 +580,9 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                       color: Colors.black,
                       size: 20,
                     ),
-                    SizedBox(width: 5),
                     Text(
-                      '${apiCar?.brand.name.toString()} Car Details',
-                      style: GoogleFonts.mulish(
+                      'Car Details',
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
@@ -632,7 +591,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                   ],
                 ),
               ),
-              actions: widget.role == 'agent'
+              actions: _isAgentRole
                   ? [
                       IconButton(
                         onPressed: shareCarWithImage,
@@ -642,28 +601,62 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                         ),
                       ),
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () => _showChatFeatureDialog(context),
                         icon: SizedBox(
                           height: 45,
                           width: 45,
                           child: Image.asset(
-                            'assets/placeholders/chat_icon.png', // ✅ FIXED PATH
+                            'assets/placeholders/chat_icon.png',
                             fit: BoxFit.contain,
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.favorite,
-                          color: Color.fromRGBO(255, 104, 31, 1), // dark blue
+                        icon: Icon(
+                          (apiCar?.isFavorite ?? false)
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: (apiCar?.isFavorite ?? false)
+                              ? Color.fromRGBO(255, 104, 31, 1)
+                              : Colors.black,
                         ),
-                        onPressed: () {
-                          // delete action
-                        },
+                        onPressed:
+                            (apiCar?.isFavorite ?? false) || _isTogglingFavorite
+                            ? null
+                            : () => _toggleAgentFavorite(widget.carId),
+                        tooltip: (apiCar?.isFavorite ?? false)
+                            ? 'Already in favorites'
+                            : 'Add to favorites',
                       ),
                     ]
                   : widget.actionIcons == 'listOfCars'
-                  ? []
+                  ? [
+                      IconButton(
+                        onPressed: () {},
+                        icon: Icon(
+                          Icons.download,
+                          color: Color.fromRGBO(255, 104, 31, 1),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: shareCarWithImage,
+                        icon: Icon(
+                          Icons.share,
+                          color: Color.fromRGBO(255, 104, 31, 1),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _showChatFeatureDialog(context),
+                        icon: SizedBox(
+                          height: 45,
+                          width: 45,
+                          child: Image.asset(
+                            'assets/placeholders/chat_icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ]
                   : [
                       IconButton(
                         icon: const Icon(
@@ -684,7 +677,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                                 SnackBar(
                                   content: Text(
                                     "Car deleted successfully",
-                                    style: GoogleFonts.mulish(
+                                    style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.white,
                                       fontWeight: FontWeight.w700,
@@ -701,7 +694,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                                 homeScreenRoute,
                                 (route) => false,
                                 arguments: {
-                                  'role': widget.role,
+                                  'role': _roleForNavigation,
                                   'initialTab': 1,
                                 },
                               );
@@ -721,7 +714,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                             context,
                             carUpdateDetails,
                             arguments: {
-                              'role': widget.role,
+                              'role': _roleForNavigation,
                               'carId': widget.carId,
                             },
                           );
@@ -757,7 +750,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                               Text(
                                 'Add your car details to create a listing. \nMake it easier for buyers to \nfind your car. 🚗',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 16,
                                   color: const Color.fromRGBO(41, 68, 135, 1),
                                 ),
@@ -842,7 +835,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
 
                   const SizedBox(height: 12),
 
-                  if (widget.role == 'agent')
+                  if (widget.actionIcons == 'listOfCars')
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Container(
@@ -867,7 +860,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                                       .join(', '),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.cairo(
+                                  style: TextStyle(
                                     fontSize: isWideLayout ? 13 : 12,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -885,10 +878,8 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                     children: [
                       // Car Title + Chips
                       Text(
-                        apiCar?.model.name.toString() ??
-                            widget.previewData['make']?.toString() ??
-                            '',
-                        style: GoogleFonts.inter(
+                        _carTitle(apiCar, previewData),
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1037,6 +1028,51 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                     },
                   ),
 
+                  if (showBottomButtons)
+                    _infoCard(
+                      margin: cardMargin,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Published',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.indigo,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              _selectedStatus,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: _isPublished
+                                    ? const Color.fromRGBO(34, 139, 34, 1)
+                                    : Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: _isPublished,
+                              activeColor: const Color.fromRGBO(
+                                255,
+                                104,
+                                31,
+                                1,
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _isPublished = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
                   const SizedBox(height: 16),
 
                   // Bottom Buttons
@@ -1050,9 +1086,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () {
-                                Navigator.pop(context);
-                              },
+                              onTap: _goToBasicEditScreen,
                               child: Container(
                                 width: 170,
                                 height: 50,
@@ -1071,7 +1105,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                                 child: Center(
                                   child: Text(
                                     'EDIT',
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                       color: const Color.fromRGBO(
@@ -1103,7 +1137,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                                 child: Center(
                                   child: Text(
                                     'POST',
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w600,
                                       color: Colors.white,
@@ -1125,6 +1159,39 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
     );
   }
 
+  Future<String?> _resolveShareImagePath(String imagePath) async {
+    if (imagePath.trim().isEmpty) return null;
+    final Uri? uri = Uri.tryParse(imagePath);
+    final tempDir = await getTemporaryDirectory();
+    final targetPath =
+        '${tempDir.path}/car_share_image_${DateTime.now().millisecondsSinceEpoch}.png';
+
+    try {
+      if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+        final response = await http.get(uri);
+        if (response.statusCode == 200) {
+          final file = File(targetPath);
+          await file.writeAsBytes(response.bodyBytes);
+          return file.path;
+        }
+        return null;
+      }
+
+      final File source = uri != null && uri.scheme == 'file'
+          ? File(uri.toFilePath())
+          : File(imagePath);
+
+      if (await source.exists()) {
+        final file = await source.copy(targetPath);
+        return file.path;
+      }
+    } catch (e) {
+      debugPrint('Image resolve error for share: $e');
+    }
+
+    return null;
+  }
+
   /// Helper Widgets ---:>
   // Shows a dialog box to confirm car deletion
   Future<bool?> _deleteCarDialogBox(BuildContext context) {
@@ -1134,7 +1201,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         return AlertDialog(
           title: Text(
             "Delete Car",
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: 16,
               color: Colors.black,
               fontWeight: FontWeight.w700,
@@ -1142,7 +1209,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
           ),
           content: Text(
             "Are you sure you want to delete this car?",
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: 16,
               color: Colors.black,
               fontWeight: FontWeight.w700,
@@ -1153,7 +1220,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
               onPressed: () => Navigator.pop(context, false),
               child: Text(
                 "Cancel",
-                style: GoogleFonts.mulish(
+                style: TextStyle(
                   fontSize: 16,
                   color: Colors.blue,
                   fontWeight: FontWeight.w700,
@@ -1164,7 +1231,7 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
               onPressed: () => Navigator.pop(context, true),
               child: Text(
                 "Delete",
-                style: GoogleFonts.mulish(
+                style: TextStyle(
                   fontSize: 16,
                   color: Colors.red,
                   fontWeight: FontWeight.w700,
@@ -1175,6 +1242,94 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         );
       },
     );
+  }
+
+  void _showChatFeatureDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'DealersHub',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        content: Text(
+          'This feature available in the future update. Stay tuned! 🚀',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.black87,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _toggleAgentFavorite(int carId) async {
+    if (_isTogglingFavorite) return;
+    setState(() => _isTogglingFavorite = true);
+
+    final singleCarVM = context.read<SingleCarDetailsViewModel>();
+    final apiCar = singleCarVM.singleCar;
+    final isFavorite = apiCar?.isFavorite ?? false;
+
+    try {
+      bool success = false;
+      String message = '';
+      String feedbackType = '';
+
+      if (isFavorite) {
+        // Already added; no remove action required per requirements.
+        success = true;
+        message = 'Already in your favorite cars';
+        feedbackType = 'added';
+      } else {
+        final addVm = context.read<AddFavCarsAgentsViewModel>();
+        success = await addVm.addToFavorite(carId);
+        if (success) {
+          message = 'Added to your favorite cars';
+          feedbackType = 'added';
+        }
+      }
+
+      if (mounted && success) {
+        // Refresh the API data to get the updated favorite status
+        singleCarVM.fetchedSingleCardetails(carId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              message,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: feedbackType == 'added'
+                ? Colors.green
+                : Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTogglingFavorite = false);
+      }
+    }
   }
 }
 
@@ -1199,33 +1354,55 @@ Widget _infoCard({
     horizontal: 12,
     vertical: 8,
   ),
+  VoidCallback? onTap,
 }) {
+  final card = Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Color(0xFFE2E8F0)),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x12000000),
+          blurRadius: 12,
+          offset: Offset(0, 5),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title != null) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.indigo,
+                  ),
+                ),
+              ),
+              if (onTap != null)
+                const Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Colors.indigo,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        ...children,
+      ],
+    ),
+  );
+
   return Padding(
     padding: margin,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5FF),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (title != null) ...[
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.indigo,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          ...children,
-        ],
-      ),
-    ),
+    child: onTap == null ? card : GestureDetector(onTap: onTap, child: card),
   );
 }
 
@@ -1246,7 +1423,7 @@ Widget _infoRow(BuildContext context, String label, String value) {
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: labelFontSize,
               color: const Color.fromRGBO(59, 59, 59, 1),
               fontWeight: FontWeight.w400,
@@ -1257,7 +1434,7 @@ Widget _infoRow(BuildContext context, String label, String value) {
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: labelFontSize,
               color: Colors.black,
               fontWeight: FontWeight.w700,
@@ -1314,7 +1491,7 @@ Widget showSuccessfulDialogbox(
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.mulish(
+            style: TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1327,7 +1504,7 @@ Widget showSuccessfulDialogbox(
           Text(
             message,
             textAlign: TextAlign.center,
-            style: GoogleFonts.mulish(fontSize: 16, color: Colors.white),
+            style: TextStyle(fontSize: 16, color: Colors.white),
           ),
         ],
       ),

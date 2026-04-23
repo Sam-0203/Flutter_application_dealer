@@ -243,7 +243,7 @@ class Image {
 
   factory Image.fromJson(Map<String, dynamic> json) => Image(
     id: _asInt(json["id"]),
-    imageUrl: _asString(json["image_url"]),
+    imageUrl: _asString(json["url"] ?? json["image_url"]),
     isPrimary: _asBool(json["is_primary"]),
   );
 

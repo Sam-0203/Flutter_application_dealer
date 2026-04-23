@@ -10,7 +10,7 @@ class SearchDetailsResponse {
   String message;
   bool status;
   int statusCode;
-  List<SearchDatum> data;
+  SearchData data;
 
   SearchDetailsResponse({
     required this.message,
@@ -24,16 +24,49 @@ class SearchDetailsResponse {
         message: _asString(json["message"]),
         status: _asBool(json["status"]),
         statusCode: _asInt(json["status_code"]),
-        data: _extractSearchItems(
-          json["data"],
-        ).map((x) => SearchDatum.fromJson(_asMap(x))).toList(),
+        data: SearchData.fromJson(_asMap(json["data"])),
       );
 
   Map<String, dynamic> toJson() => {
     "message": message,
     "status": status,
     "status_code": statusCode,
-    "data": List<dynamic>.from(data.map((x) => x.toJson())),
+    "data": data.toJson(),
+  };
+}
+
+// New class to handle pagination + items
+class SearchData {
+  List<SearchDatum> items;
+  int total;
+  int page;
+  int perPage;
+  int pages;
+
+  SearchData({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.perPage,
+    required this.pages,
+  });
+
+  factory SearchData.fromJson(Map<String, dynamic> json) => SearchData(
+    items: _asList(
+      json["items"],
+    ).map((x) => SearchDatum.fromJson(_asMap(x))).toList(),
+    total: _asInt(json["total"]),
+    page: _asInt(json["page"]),
+    perPage: _asInt(json["per_page"]),
+    pages: _asInt(json["pages"]),
+  );
+
+  Map<String, dynamic> toJson() => {
+    "items": List<dynamic>.from(items.map((x) => x.toJson())),
+    "total": total,
+    "page": page,
+    "per_page": perPage,
+    "pages": pages,
   };
 }
 
@@ -42,7 +75,7 @@ class SearchDatum {
   int id;
   String status;
   Brand brand;
-  Brand model;
+  Brand models; // Fixed: matches JSON key "models"
   Brand variant;
   ColorModel color;
   Brand fuelType;
@@ -61,7 +94,7 @@ class SearchDatum {
     required this.id,
     required this.status,
     required this.brand,
-    required this.model,
+    required this.models,
     required this.variant,
     required this.color,
     required this.fuelType,
@@ -70,7 +103,7 @@ class SearchDatum {
     required this.kmRange,
     required this.ownerType,
     required this.rto,
-    required this.otherDetails,
+    this.otherDetails,
     required this.features,
     required this.images,
     required this.isFavorite,
@@ -81,7 +114,7 @@ class SearchDatum {
     id: _asInt(json["id"]),
     status: _asString(json["status"]),
     brand: Brand.fromJson(_asMap(json["brand"])),
-    model: Brand.fromJson(_asMap(json["model"])),
+    models: Brand.fromJson(_asMap(json["models"])), // Fixed
     variant: Brand.fromJson(_asMap(json["variant"])),
     color: ColorModel.fromJson(_asMap(json["color"])),
     fuelType: Brand.fromJson(_asMap(json["fuel_type"])),
@@ -93,7 +126,7 @@ class SearchDatum {
     otherDetails: json["other_details"] == null
         ? null
         : OtherDetails.fromJson(_asMap(json["other_details"])),
-    features: Features.fromJson(_asMap(json["features"])),
+    features: Features.fromJson(_asMap(json["features"] ?? {})),
     images: _asList(
       json["images"],
     ).map((x) => ImageModel.fromJson(_asMap(x))).toList(),
@@ -105,7 +138,7 @@ class SearchDatum {
     "id": id,
     "status": status,
     "brand": brand.toJson(),
-    "model": model.toJson(),
+    "models": models.toJson(), // Fixed
     "variant": variant.toJson(),
     "color": color.toJson(),
     "fuel_type": fuelType.toJson(),
@@ -126,19 +159,22 @@ class Dealer {
   String dealershipName;
   String state;
   String city;
+  String postedDate;
 
   Dealer({
     required this.id,
     required this.dealershipName,
     required this.state,
     required this.city,
+    required this.postedDate,
   });
 
   factory Dealer.fromJson(Map<String, dynamic> json) => Dealer(
     id: _asInt(json["id"]),
     dealershipName: _asString(json["dealership_name"]),
     state: _asString(json["state"]),
-    city: _asString(json["city"]),
+    city: _asString(json["city"]).trim(), // trim extra space
+    postedDate: _asString(json["posted_date"]),
   );
 
   Map<String, dynamic> toJson() => {
@@ -146,6 +182,7 @@ class Dealer {
     "dealership_name": dealershipName,
     "state": state,
     "city": city,
+    "posted_date": postedDate,
   };
 }
 
@@ -283,6 +320,8 @@ class Rto {
   Map<String, dynamic> toJson() => {"id": id, "code": code};
 }
 
+// ====================== Helper Functions ======================
+
 Map<String, dynamic> _asMap(dynamic value) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) {
@@ -293,18 +332,6 @@ Map<String, dynamic> _asMap(dynamic value) {
 
 List<dynamic> _asList(dynamic value) => value is List ? value : const [];
 
-List<dynamic> _extractSearchItems(dynamic value) {
-  if (value is List) return value;
-  if (value is Map) {
-    final map = _asMap(value);
-    final items = map["items"];
-    if (items is List) return items;
-    final nestedData = map["data"];
-    if (nestedData is List) return nestedData;
-  }
-  return const [];
-}
-
 String _asString(dynamic value, {String fallback = ''}) {
   if (value == null) return fallback;
   return value.toString();
@@ -312,7 +339,8 @@ String _asString(dynamic value, {String fallback = ''}) {
 
 String? _asNullableString(dynamic value) {
   if (value == null) return null;
-  return value.toString();
+  final str = value.toString().trim();
+  return str.isEmpty || str.toLowerCase() == 'null' ? null : str;
 }
 
 int _asInt(dynamic value, {int fallback = 0}) {
