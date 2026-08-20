@@ -6,13 +6,15 @@ import 'package:dealershub_/src/models/add%20car/agent_fav_model.dart'
 import 'package:dealershub_/src/models/add%20car/agent_remove_fav_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_details_model.dart'
     as car_details;
-import 'package:dealershub_/src/models/add%20car/car_fav_dealer_model.dart';
+import 'package:dealershub_/src/models/add%20car/car_fav_dealer_model.dart'
+    as fav;
 import 'package:dealershub_/src/models/add%20car/car_remove_fav_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_update_request_model.dart';
 import 'package:dealershub_/src/models/add%20car/car_update_response_model.dart';
 import 'package:dealershub_/src/models/add%20car/list_of_car_details_model.dart';
 import 'package:dealershub_/src/models/add%20car/my_inventry_model.dart';
 import 'package:dealershub_/src/models/add%20car/my_inventry_search_model.dart';
+import 'package:dealershub_/src/models/add%20car/rc_resposes_model.dart';
 import 'package:dealershub_/src/models/add%20car/search_details_model.dart';
 import 'package:dealershub_/src/utils/api_urls.dart';
 import 'package:dealershub_/src/utils/helper/secure_storage.dart';
@@ -605,7 +607,7 @@ class DeleteCarImageService {
 
 // For fetching all favorite cars Dealer : ====>
 class DealerFavoriteCarsService {
-  Future<FavoriteCarsResponse> fetchDealerFavoriteCars() async {
+  Future<fav.FavoriteCarsResponse> fetchDealerFavoriteCars() async {
     final token = await SecureStorage.getToken();
     final uri = Uri.parse(ApiUrls.getDealerFavCar);
 
@@ -619,7 +621,7 @@ class DealerFavoriteCarsService {
     debugPrint('Dealer favorites body: ${response.body}');
 
     if (response.statusCode == 200) {
-      return favoriteCarsResponseFromJson(response.body);
+      return fav.favoriteCarsResponseFromJson(response.body);
     }
 
     final fallback = _emptyDealerFavoritesIfApplicable(response);
@@ -630,7 +632,9 @@ class DealerFavoriteCarsService {
     );
   }
 
-  FavoriteCarsResponse? _emptyDealerFavoritesIfApplicable(http.Response res) {
+  fav.FavoriteCarsResponse? _emptyDealerFavoritesIfApplicable(
+    http.Response res,
+  ) {
     if (res.statusCode != 400 && res.statusCode != 404) return null;
 
     try {
@@ -646,11 +650,11 @@ class DealerFavoriteCarsService {
 
       if (!noFavorites) return null;
 
-      return FavoriteCarsResponse(
+      return fav.FavoriteCarsResponse(
         message: message.isEmpty ? 'No favorite cars found' : message,
         status: true,
         statusCode: res.statusCode,
-        data: Data(count: 0, cars: const []),
+        data: fav.Data(count: 0, cars: const []),
       );
     } catch (_) {
       return null;
@@ -717,7 +721,7 @@ class AgentFavoriteCarsService {
 
 // For adding a car to favorite using token and car_id Dealers : ====>
 class AddFavirateCarService {
-  Future<FavoriteCarsResponse> addToFavorite(int carId) async {
+  Future<fav.FavoriteCarsResponse> addToFavorite(int carId) async {
     final token = await SecureStorage.getToken();
 
     final uri = Uri.parse(ApiUrls.addToFav);
@@ -733,7 +737,7 @@ class AddFavirateCarService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body);
-      return FavoriteCarsResponse.fromJson(data);
+      return fav.FavoriteCarsResponse.fromJson(data);
     } else {
       throw Exception(
         "Failed to add favorite - Status: ${response.statusCode}, Body: ${response.body}",
@@ -843,6 +847,28 @@ class RemoveFavCarsFroAgent {
       throw Exception(
         "Failed to remove Agent favorite - Status: ${response.statusCode}, Body: ${response.body}",
       );
+    }
+  }
+}
+
+// Search car using rc POST
+class SearchVehicalRCDealerService {
+  Future<RcUploadDetailedResponse> getRcData(String registrationNumber) async {
+    final uri = Uri.parse(ApiUrls.rc_details);
+
+    final response = await http.post(
+      uri,
+      headers: {
+        "Content-Type": "application/json",
+        // "Authorization": "Bearer $token", // if required
+      },
+      body: jsonEncode({"registration_number": registrationNumber}),
+    );
+
+    if (response.statusCode == 200) {
+      return RcUploadDetailedResponse.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception("Failed to fetch RC details");
     }
   }
 }

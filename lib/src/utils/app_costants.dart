@@ -236,6 +236,9 @@ class InputFieldPlaceholder {
   static String kilometersDriven = 'Kilometers Driven';
   static String registrationCity = 'Registration city(RTO)';
   static String carOwner = 'Number of Owners ';
+
+  // new UI New Car Entry Placeholders
+  static String carSearch = 'Enter car number';
 }
 
 class CarOptinalDetails {

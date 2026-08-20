@@ -109,9 +109,16 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
 
       if (input.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Please enter your mobile number'),
             backgroundColor: Color(0xffF47B39),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         return;
@@ -126,9 +133,16 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
 
       if (!isPhone) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Please enter a valid 10-digit mobile number'),
             backgroundColor: Color(0xffF47B39),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         return;
@@ -157,7 +171,14 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_uiErrorMessage(vm.error)),
-            backgroundColor: const Color(0xffF47B39),
+            backgroundColor: Color(0xffF47B39),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         return;
@@ -178,9 +199,16 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Something went wrong. Please try again.'),
           backgroundColor: Color(0xffF47B39),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } finally {
@@ -338,10 +366,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   child: Text.rich(
                     TextSpan(
                       text: "Don’t have an account? 👉",
-                      style: TextStyle(
-                        color: Colors.black54,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.black54, fontSize: 14),
                       children: [
                         TextSpan(
                           text: "Sign up",

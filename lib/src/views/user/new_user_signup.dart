@@ -233,8 +233,12 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
             ),
           ],
         ),
-        duration: const Duration(seconds: 2),
         backgroundColor: Color(0xffF47B39),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -296,6 +300,18 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
       return false;
     }
 
+    // GST validation (only for dealer and if entered)
+    if (widget.roleType == "dealer" && _gstController.text.trim().isNotEmpty) {
+      final gst = _gstController.text.trim().toUpperCase();
+      final gstRegex = RegExp(
+        r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$',
+      );
+      if (!gstRegex.hasMatch(gst)) {
+        _showError('Please enter a valid GST number');
+        return false;
+      }
+    }
+
     if (_pincodeController.text.trim().length != 6) {
       _showError('Please enter your valid pincode');
       return false;
@@ -321,18 +337,6 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
 
   // <=== : _validateOptionalFields : ===>
   bool _validateOptionalFields() {
-    // GST validation (only for dealer and if entered)
-    if (widget.roleType == "dealer" && _gstController.text.trim().isNotEmpty) {
-      final gst = _gstController.text.trim().toUpperCase();
-      final gstRegex = RegExp(
-        r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$',
-      );
-      if (!gstRegex.hasMatch(gst)) {
-        _showError('Please enter a valid GST number');
-        return false;
-      }
-    }
-
     // Email validation (if entered)
     if (_emailController.text.trim().isNotEmpty) {
       final email = _emailController.text.trim();
@@ -491,6 +495,9 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
   // fields checking
   bool get isMandatoryValid {
     if (widget.roleType == "dealer" && _companyController.text.trim().isEmpty) {
+      return false;
+    }
+    if (widget.roleType == "dealer" && _gstController.text.trim().isEmpty) {
       return false;
     }
 
@@ -698,6 +705,18 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
             maxLength: 10,
           ),
           const SizedBox(height: 16),
+
+          if (widget.roleType == "dealer") ...[
+            UserInputField(
+              focusNode: _gstinNumberFocus,
+              controller: _gstController,
+              hintText: InputFieldPlaceholder.GSTIN,
+              keyboardType: TextInputType.text,
+              maxLength: 15,
+              inputFormatters: [GstinFormatter()],
+            ),
+            const SizedBox(height: 16),
+          ],
 
           UserDropdownField<String>(
             hintText: InputFieldPlaceholder.StateSelection,
@@ -950,18 +969,6 @@ class _NewUserSignUpState extends State<NewUserSignUp> {
         children: [
           TextViews.OptionalFields,
           const SizedBox(height: 16),
-
-          if (widget.roleType == "dealer") ...[
-            UserInputField(
-              focusNode: _gstinNumberFocus,
-              controller: _gstController,
-              hintText: InputFieldPlaceholder.GSTIN,
-              keyboardType: TextInputType.text,
-              maxLength: 15,
-              inputFormatters: [GstinFormatter()],
-            ),
-            const SizedBox(height: 16),
-          ],
 
           UserInputField(
             controller: _emailController,

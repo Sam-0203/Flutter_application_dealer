@@ -22,6 +22,8 @@ import 'package:dealershub_/src/models/add%20car/list_of_car_details_model.dart'
     hide CarImage;
 import 'package:dealershub_/src/models/add%20car/my_inventry_model.dart';
 import 'package:dealershub_/src/models/add%20car/my_inventry_search_model.dart';
+import 'package:dealershub_/src/models/add%20car/rc_car_post_model.dart';
+import 'package:dealershub_/src/models/add%20car/rc_resposes_model.dart';
 import 'package:dealershub_/src/models/add%20car/safety_model.dart';
 import 'package:dealershub_/src/models/add%20car/search_details_model.dart';
 import 'package:dealershub_/src/models/add%20car/transmission_model.dart';
@@ -1213,5 +1215,37 @@ class RemoveFavCarsAgentsViewModel extends ChangeNotifier {
     notifyListeners();
 
     return false;
+  }
+}
+
+// Rc details video model
+class RCDetailsViewModel extends ChangeNotifier {
+  final SearchVehicalRCDealerService _service = SearchVehicalRCDealerService();
+
+  bool isLoading = false;
+  String? error;
+
+  RcUploadDetailedResponse? rcData;
+
+  Future<void> searchVehicle(String rcNumber) async {
+    try {
+      isLoading = true;
+      error = null;
+      notifyListeners();
+
+      rcData = await _service.getRcData(rcNumber);
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void reset() {
+    rcData = null;
+    error = null;
+    isLoading = false;
+    notifyListeners();
   }
 }

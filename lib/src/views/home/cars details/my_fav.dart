@@ -534,9 +534,16 @@ Future<void> _removeFavoriteCar(
           .fetchFavoriteCars();
     } else if (parentContext.mounted) {
       ScaffoldMessenger.of(parentContext).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Unable to remove favorite. Please try again.'),
           backgroundColor: Color(0xffF47B39),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }
@@ -550,9 +557,16 @@ Future<void> _removeFavoriteCar(
           .fetchFavoriteCars();
     } else if (parentContext.mounted) {
       ScaffoldMessenger.of(parentContext).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Unable to remove favorite. Please try again.'),
           backgroundColor: Color(0xffF47B39),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     }

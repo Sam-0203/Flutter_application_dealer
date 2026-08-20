@@ -788,13 +788,18 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
 
       if (!hasInsurance || !hasServiceHistory) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'Please select Insurance Validity and Service History',
             ),
             backgroundColor: Color(0xffF47B39),
             behavior: SnackBarBehavior.floating,
             duration: Duration(seconds: 2),
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         return;
@@ -895,6 +900,10 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
         content: Text(message),
         duration: const Duration(seconds: 2),
         backgroundColor: const Color(0xffF47B39),
+        behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -1155,6 +1164,11 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                                       backgroundColor: Color(0xffF47B39),
                                       behavior: SnackBarBehavior.floating,
                                       duration: const Duration(seconds: 2),
+                                      showCloseIcon: true,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(50),
+                                      ),
+                                      margin: const EdgeInsets.all(16),
                                     ),
                                   );
                                   return; // ❌ STOP navigation
@@ -1162,11 +1176,18 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
 
                                 if (carImages.length > _maxCarImages) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
                                         'Maximum 10 images allowed',
                                       ),
                                       duration: Duration(seconds: 2),
+                                      backgroundColor: Color(0xffF47B39),
+                                      behavior: SnackBarBehavior.floating,
+                                      showCloseIcon: true,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(50),
+                                      ),
+                                      margin: const EdgeInsets.all(16),
                                     ),
                                   );
                                   return;
@@ -2044,9 +2065,16 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
     if (_remainingImageSlots <= 0) {
       if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Maximum 10 images allowed'),
             duration: Duration(seconds: 2),
+            backgroundColor: Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -2248,9 +2276,16 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
     if (slotsBeforePick <= 0) {
       if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Maximum 10 images allowed'),
             duration: Duration(seconds: 2),
+            backgroundColor: Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -2313,6 +2348,13 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                 'Only $validCount image(s) added. Maximum $_maxCarImages images allowed.',
               ),
               duration: const Duration(seconds: 2),
+              backgroundColor: Color(0xffF47B39),
+              behavior: SnackBarBehavior.floating,
+              showCloseIcon: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(50),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
@@ -2325,7 +2367,14 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
                 '❌ Skipped ${invalidFiles.length} file(s). Only JPG, PNG, WebP, BMP, TIFF allowed.\n'
                 'HEIC/HEIF are also supported. No GIF, videos, or other formats.',
               ),
-              duration: const Duration(seconds: 3),
+              backgroundColor: Color(0xffF47B39),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              showCloseIcon: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(50),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
@@ -2344,9 +2393,16 @@ class _CarOPtionalDetailsState extends State<CarOPtionalDetails> {
           if (!_isValidImageFile(pickedFile.path)) {
             if (mounted && context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text('❌ Invalid file format. Only images allowed.'),
                   duration: Duration(seconds: 2),
+                  backgroundColor: Color(0xffF47B39),
+                  behavior: SnackBarBehavior.floating,
+                  showCloseIcon: true,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  margin: const EdgeInsets.all(16),
                 ),
               );
             }

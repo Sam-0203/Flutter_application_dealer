@@ -436,20 +436,18 @@ class _NewCarDetailsState extends State<NewCarDetails> {
                 SizedBox(width: 5),
                 Text(
                   'Please fill all mandatory fields',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Color(0xffF47B39),
+            showCloseIcon: true,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-              side: const BorderSide(color: Colors.white, width: 2),
+              borderRadius: BorderRadius.circular(50),
             ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         return; // ⛔ STOP NAVIGATION

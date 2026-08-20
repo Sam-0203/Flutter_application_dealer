@@ -6,6 +6,7 @@ import 'package:dealershub_/src/utils/responsive/responsive_helper.dart';
 import '../../../utils/helper/type_converters.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'dart:io';
@@ -97,6 +98,21 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
     }
   }
 
+  String formatDate(DateTime? date) {
+    if (date == null) return '-';
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
+  String formatInsurance(DateTime? date) {
+    if (date == null) return '-';
+    return "Valid till ${DateFormat('dd MMM yyyy').format(date)}";
+  }
+
+  String formatRoadTax(DateTime? date) {
+    if (date == null) return '-';
+    return "Paid until ${DateFormat('dd MMM yyyy').format(date)}";
+  }
+
   String? get _roleForNavigation {
     final role = (widget.role ?? '').trim().toLowerCase();
     if (role.contains('dealer')) return 'dealer';
@@ -119,6 +135,10 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         content: Text(message),
         duration: const Duration(seconds: 2),
         backgroundColor: const Color(0xffF47B39),
+        behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -321,27 +341,20 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
   }
 
   String _carTitle(dynamic apiCar, Map<String, dynamic> previewData) {
-    final String apiMake = (apiCar?.brand?.name?.toString() ?? '').trim();
-    String apiModel = '';
-    try {
-      apiModel = (apiCar?.models?.name?.toString() ?? '').trim();
-    } catch (_) {}
-    if (apiModel.isEmpty) {
-      try {
-        apiModel = (apiCar?.model?.name?.toString() ?? '').trim();
-      } catch (_) {}
+    final String apiModel = (apiCar?.model?.name?.toString() ?? '').trim();
+
+    final String previewVehicle = (previewData['vehicle']?.toString() ?? '')
+        .trim();
+
+    if (apiModel.isNotEmpty) {
+      return apiModel;
     }
-    final String previewMake = (previewData['make']?.toString() ?? '').trim();
-    final String previewModel = (previewData['model']?.toString() ?? '').trim();
 
-    final String make = apiMake.isNotEmpty ? apiMake : previewMake;
-    final String model = apiModel.isNotEmpty ? apiModel : previewModel;
+    if (previewVehicle.isNotEmpty) {
+      return previewVehicle;
+    }
 
-    final String title = [
-      make,
-      model,
-    ].where((part) => part.isNotEmpty).join(' - ');
-    return title.isNotEmpty ? title : 'No data';
+    return 'No data';
   }
 
   @override
@@ -381,46 +394,55 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
       final vm = context.read<PostCarViewModel>();
       carData['status'] = _selectedStatus;
 
+      // final model = PostCarRequestModel(
+      //   brandId: toInt(carData['make']),
+      //   modelId: toInt(carData['model']),
+      //   variantId: toInt(carData['variant']),
+      //   fuelTypeId: toInt(carData['fuelType']),
+      //   transmissionId: toInt(carData['transmission']),
+      //   colorId: toInt(carData['color']),
+      //   ownerTypeId: toInt(carData['owner']),
+      //   rtoId: toInt(carData['registration']),
+
+      //   manufacturingYear: toInt(carData['manufactorYear']),
+      //   kmRange: toStringValue(carData['kilometers']),
+
+      //   insuranceValidity: toStringValue(carData['insurance']),
+      //   serviceHistory: toStringValue(
+      //     carData['serviceHistory'] ?? carData['service_history'],
+      //   ),
+
+      //   safetyFeatureIds: toIntList(carData['safety_feature_ids']),
+      //   comfortFeatureIds: toIntList(carData['comfort_feature_ids']),
+      //   infotainmentFeatureIds: toIntList(carData['infotainment_feature_ids']),
+      //   interiorFeatureIds: toIntList(carData['interior_feature_ids']),
+      //   exteriorFeatureIds: toIntList(carData['exterior_feature_ids']),
+
+      //   extraSafetyFeatures:
+      //       (carData['extra_safety_features'] as List?)?.cast<String>() ?? [],
+      //   extraComfortFeatures:
+      //       (carData['extra_comfort_features'] as List?)?.cast<String>() ?? [],
+      //   extraInteriorFeatures:
+      //       (carData['extra_interior_features'] as List?)?.cast<String>() ?? [],
+      //   extraExteriorFeatures:
+      //       (carData['extra_exterior_features'] as List?)?.cast<String>() ?? [],
+      //   extraInfotainmentFeatures:
+      //       (carData['extra_infotainment_features'] as List?)?.cast<String>() ??
+      //       [],
+
+      //   images: (carData['images'] as List? ?? [])
+      //       .map((e) => File(e.toString()))
+      //       .toList(),
+      //   status: _selectedStatus,
+      //   registrationNumber: toStringValue(carData['registrationNumber']),
+      // );
+
       final model = PostCarRequestModel(
-        brandId: toInt(carData['make']),
-        modelId: toInt(carData['model']),
-        variantId: toInt(carData['variant']),
-        fuelTypeId: toInt(carData['fuelType']),
-        transmissionId: toInt(carData['transmission']),
-        colorId: toInt(carData['color']),
-        ownerTypeId: toInt(carData['owner']),
-        rtoId: toInt(carData['registration']),
-
-        manufacturingYear: toInt(carData['manufactorYear']),
-        kmRange: toStringValue(carData['kilometers']),
-
-        insuranceValidity: toStringValue(carData['insurance']),
-        serviceHistory: toStringValue(
-          carData['serviceHistory'] ?? carData['service_history'],
-        ),
-
-        safetyFeatureIds: toIntList(carData['safety_feature_ids']),
-        comfortFeatureIds: toIntList(carData['comfort_feature_ids']),
-        infotainmentFeatureIds: toIntList(carData['infotainment_feature_ids']),
-        interiorFeatureIds: toIntList(carData['interior_feature_ids']),
-        exteriorFeatureIds: toIntList(carData['exterior_feature_ids']),
-
-        extraSafetyFeatures:
-            (carData['extra_safety_features'] as List?)?.cast<String>() ?? [],
-        extraComfortFeatures:
-            (carData['extra_comfort_features'] as List?)?.cast<String>() ?? [],
-        extraInteriorFeatures:
-            (carData['extra_interior_features'] as List?)?.cast<String>() ?? [],
-        extraExteriorFeatures:
-            (carData['extra_exterior_features'] as List?)?.cast<String>() ?? [],
-        extraInfotainmentFeatures:
-            (carData['extra_infotainment_features'] as List?)?.cast<String>() ??
-            [],
-
+        registrationNumber: toStringValue(carData['registrationNumber']),
+        kmRange: toStringValue(carData['kilometersDriven']),
         images: (carData['images'] as List? ?? [])
             .map((e) => File(e.toString()))
             .toList(),
-        status: _selectedStatus,
       );
 
       debugPrint('Images for post : ${model.images}');
@@ -438,9 +460,19 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
         );
       } else {
         debugPrint(' Error : ${vm.errorMessage}');
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(vm.errorMessage ?? 'Failed')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.errorMessage ?? 'Failed'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
       }
     }
 
@@ -685,6 +717,12 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                                   ),
                                   backgroundColor: Colors.green,
                                   behavior: SnackBarBehavior.floating,
+                                  duration: Duration(seconds: 2),
+                                  showCloseIcon: true,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  margin: const EdgeInsets.all(16),
                                 ),
                               );
 
@@ -700,7 +738,17 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                               );
                             } else if (deleteVM.error != null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(deleteVM.error!)),
+                                SnackBar(
+                                  content: Text(deleteVM.error!),
+                                  duration: Duration(seconds: 2),
+                                  backgroundColor: Color(0xffF47B39),
+                                  behavior: SnackBarBehavior.floating,
+                                  showCloseIcon: true,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  margin: const EdgeInsets.all(16),
+                                ),
                               );
                             }
                           }
@@ -898,33 +946,19 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                           _infoChip(
                             context,
                             apiCar?.manufacturingYear.toString() ??
-                                previewData['manufactorYear']?.toString() ??
+                                previewData['manufacturingDate']?.toString() ??
                                 '',
                           ),
                           _infoChip(
                             context,
                             apiCar?.rto.code.toString() ??
-                                previewData['registration']?.toString() ??
+                                previewData['rto']?.toString() ??
                                 '',
                           ),
                         ],
                       ),
 
                       // Car Specs
-                      _infoRow(
-                        context,
-                        'Transmission',
-                        apiCar?.transmission.name.toString() ??
-                            previewData['transmission']?.toString() ??
-                            '',
-                      ),
-                      _infoRow(
-                        context,
-                        'Variant',
-                        apiCar?.variant.name.toString() ??
-                            previewData['variant']?.toString() ??
-                            '',
-                      ),
                       _infoRow(
                         context,
                         'Color',
@@ -936,98 +970,124 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                         context,
                         'Kilometers',
                         apiCar?.kmRange.toString() ??
-                            previewData['kilometers']?.toString() ??
+                            previewData['kilometersDriven']?.toString() ??
                             '',
                       ),
                       _infoRow(
                         context,
-                        'Owner(s)',
+                        'Owner Name',
+                        apiCar?.owner.name.toString() ??
+                            previewData['ownerName'] ??
+                            '',
+                      ),
+                      _infoRow(
+                        context,
+                        'Owner Type',
                         apiCar?.ownerType.name.toString() ??
-                            previewData['owner']?.toString() ??
+                            previewData['ownerType'] ??
                             '',
                       ),
                       _infoRow(
                         context,
                         'Insurance',
-                        apiCar?.otherDetails?.insuranceValidity ??
-                            showNoData(previewData['insurance']),
+                        apiCar != null
+                            ? formatInsurance(apiCar.insuranceUpto)
+                            : showNoData(previewData['insurance']),
                       ),
-
                       _infoRow(
                         context,
-                        'Service History',
-                        apiCar?.otherDetails?.serviceHistory ??
-                            showNoData(previewData['serviceHistory']),
+                        'Policy Number',
+                        apiCar?.policyNumber ??
+                            showNoData(previewData['policyNumber']),
+                      ),
+                      _infoRow(
+                        context,
+                        'RC number',
+                        apiCar?.registrationNumber ??
+                            showNoData(previewData['rcNumber']),
+                      ),
+                      _infoRow(
+                        context,
+                        'Engine Capacity',
+                        apiCar?.cubicCapacity ??
+                            showNoData(previewData['engineCapacity']),
+                      ),
+                      _infoRow(
+                        context,
+                        'Engine Number',
+                        apiCar?.engineNumber ??
+                            showNoData(previewData['engineNumber']),
+                      ),
+                      _infoRow(
+                        context,
+                        'Engine chassisNumber',
+                        apiCar?.vehicleChasiNumber ??
+                            showNoData(previewData['chassisNumber']),
+                      ),
+                      _infoRow(
+                        context,
+                        'Registration',
+                        apiCar != null
+                            ? formatDate(apiCar.registrationDate)
+                            : showNoData(previewData['registrationDate']),
+                      ),
+                      _infoRow(
+                        context,
+                        'Financed',
+                        apiCar != null
+                            ? (apiCar.financed
+                                  ? "Yes (${apiCar.financer})"
+                                  : "No")
+                            : showNoData(previewData['financed']),
+                      ),
+                      _infoRow(
+                        context,
+                        'RC Status',
+                        apiCar?.rcStatus.replaceAll('_', ' ').toUpperCase() ??
+                            showNoData(previewData['rcStatus']),
+                      ),
+                      _infoRow(
+                        context,
+                        'Tax paid upto',
+                        apiCar != null
+                            ? formatDate(apiCar.taxPaidUpto)
+                            : showNoData(previewData['roadTax']),
                       ),
                     ],
                   ),
 
                   // Feature Sections
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final featureCards = [
-                        _infoCard(
-                          margin: cardMargin,
-                          title: 'Safety Features',
-                          children: buildFeatureSection(
-                            apiCar?.features.safety ??
-                                previewData['safetyFeatures'],
-                          ),
-                        ),
-                        _infoCard(
-                          margin: cardMargin,
-                          title: 'Comfort & Convenience',
-                          children: buildFeatureSection(
-                            apiCar?.features.comfort ??
-                                previewData['comfortFeatures'],
-                          ),
-                        ),
-                        _infoCard(
-                          margin: cardMargin,
-                          title: 'Infotainment & Connectivity',
-                          children: buildFeatureSection(
-                            apiCar?.features.infotainment ??
-                                previewData['connectivityFeatures'],
-                          ),
-                        ),
-                        _infoCard(
-                          margin: cardMargin,
-                          title: 'Interior Features',
-                          children: buildFeatureSection(
-                            apiCar?.features.interior ??
-                                previewData['interiorFeatures'],
-                          ),
-                        ),
-                        _infoCard(
-                          margin: cardMargin,
-                          title: 'Exterior Features',
-                          children: buildFeatureSection(
-                            apiCar?.features.exterior ??
-                                previewData['exteriorFeatures'],
-                          ),
-                        ),
-                      ];
+                  // LayoutBuilder(
+                  //   builder: (context, constraints) {
+                  //     final featureCards = [
+                  //       _infoCard(
+                  //         margin: cardMargin,
+                  //         title: 'Car Features',
+                  //         children: buildFeatureSection(
+                  //           apiCar?.features.safety ?? previewData['features'],
+                  //         ),
+                  //       ),
+                  //     ];
 
-                      if (!isWideLayout) {
-                        return Column(children: featureCards);
-                      }
+                  //     if (!isWideLayout) {
+                  //       return Column(children: featureCards);
+                  //     }
 
-                      const double spacing = 12;
-                      final double cardWidth =
-                          (constraints.maxWidth - spacing) / 2;
+                  //     const double spacing = 12;
+                  //     final double cardWidth =
+                  //         (constraints.maxWidth - spacing) / 2;
 
-                      return Wrap(
-                        spacing: spacing,
-                        runSpacing: 0,
-                        children: featureCards
-                            .map(
-                              (card) => SizedBox(width: cardWidth, child: card),
-                            )
-                            .toList(),
-                      );
-                    },
-                  ),
-
+                  //     return Wrap(
+                  //       spacing: spacing,
+                  //       runSpacing: 0,
+                  //       children: featureCards
+                  //           .map(
+                  //             (card) => SizedBox(width: cardWidth, child: card),
+                  //           )
+                  //           .toList(),
+                  //     );
+                  //   },
+                  // ),
                   if (showBottomButtons)
                     _infoCard(
                       margin: cardMargin,
@@ -1322,6 +1382,12 @@ class _CarDetailsReviewState extends State<CarDetailsReview> {
                 ? Colors.green
                 : Color(0xffF47B39),
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -1415,12 +1481,13 @@ Widget _infoRow(BuildContext context, String label, String value) {
   );
 
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
+    padding: const EdgeInsets.symmetric(vertical: 8),
     child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
+        // Fixed width label
+        SizedBox(
+          width: 140,
           child: Text(
             label,
             style: TextStyle(
@@ -1430,10 +1497,15 @@ Widget _infoRow(BuildContext context, String label, String value) {
             ),
           ),
         ),
+
+        const SizedBox(width: 12),
+
+        // Value
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.right,
+            softWrap: true,
             style: TextStyle(
               fontSize: labelFontSize,
               color: Colors.black,

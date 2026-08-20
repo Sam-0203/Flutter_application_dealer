@@ -82,6 +82,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => DealerProfileViewModel()),
         ChangeNotifierProvider(create: (_) => AgentProfileViewModel()),
         ChangeNotifierProvider(create: (_) => LogoutViewModel()),
+        ChangeNotifierProvider(create: (_) => RCDetailsViewModel()),
       ],
       child: MainApp(
         initialRoute: initialRoute,
@@ -185,12 +186,16 @@ class _MainAppState extends State<MainApp> {
                   SnackBar(
                     content: Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.white, size: 30),
+                        Icon(
+                          Icons.wifi_off_outlined,
+                          color: Colors.white,
+                          size: 25,
+                        ),
                         SizedBox(width: 5),
                         Text(
                           "No Internet Connection",
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -198,6 +203,12 @@ class _MainAppState extends State<MainApp> {
                     ),
                     backgroundColor: Colors.red,
                     duration: const Duration(seconds: 3),
+                    behavior: SnackBarBehavior.floating,
+                    showCloseIcon: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    margin: const EdgeInsets.all(8),
                   ),
                 );
               }
@@ -237,7 +248,13 @@ class _MainAppState extends State<MainApp> {
         fontFamily: GoogleFonts.mulish().fontFamily,
         textTheme: GoogleFonts.mulishTextTheme(),
         primaryTextTheme: GoogleFonts.mulishTextTheme(),
-        scaffoldBackgroundColor: const Color.fromRGBO(239, 239, 239, 1),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+        ),
+
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             // Disable iOS back-swipe gesture by using a non-Cupertino transition.
@@ -246,6 +263,26 @@ class _MainAppState extends State<MainApp> {
           },
         ),
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        fontFamily: GoogleFonts.mulish().fontFamily,
+        textTheme: GoogleFonts.mulishTextTheme(),
+        primaryTextTheme: GoogleFonts.mulishTextTheme(),
+        scaffoldBackgroundColor: const Color.fromRGBO(18, 18, 18, 1),
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+        ),
+
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+          },
+        ),
+      ),
+      themeMode: ThemeMode.system, // follows device setting
       onGenerateRoute: controller,
       initialRoute: widget.initialRoute,
 

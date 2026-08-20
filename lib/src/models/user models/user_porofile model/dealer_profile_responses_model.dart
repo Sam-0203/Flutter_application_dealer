@@ -62,7 +62,7 @@ class Data {
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     id: json["id"],
-    dealershipName: json["dealership_name"],
+    dealershipName: json["dealershipName"],
     mobile: json["mobile"],
     email: json["email"],
     isVerified: json["is_verified"],

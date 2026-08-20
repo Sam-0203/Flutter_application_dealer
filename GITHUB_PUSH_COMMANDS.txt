@@ -1,0 +1,7 @@
+# Commands used to push code to GitHub
+
+git status --porcelain=v1 -b
+git remote -v
+git add -A
+git commit -m "Update app assets, models, and screens"
+git push origin main

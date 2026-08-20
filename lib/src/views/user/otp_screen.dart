@@ -613,10 +613,16 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
 
       if (!resendSucceeded) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Failed to resend OTP. Please try again.'),
             backgroundColor: Color(0xffF47B39),
             duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
         return;
@@ -624,9 +630,16 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
 
       _startTimer();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('OTP resent successfully'),
           duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } catch (e) {
@@ -634,7 +647,14 @@ class _OtpScreenState extends State<OtpScreen> with CodeAutoFill {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error resending OTP. Please try again later.'),
-          backgroundColor: const Color(0xffF47B39),
+          backgroundColor: Color(0xffF47B39),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } finally {

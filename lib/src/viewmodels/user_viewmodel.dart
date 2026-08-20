@@ -226,12 +226,7 @@ class LogoutViewModel extends ChangeNotifier {
     notifyListeners();
 
     final success = await _service.logout();
-    debugPrint('User logged out: $success');
-
-    if (success) {
-      // ✅ Clear local data
-      await SecureStorage.clearAll(); // or delete token
-    }
+    debugPrint('Logout result: $success');
 
     _isLoading = false;
     notifyListeners();

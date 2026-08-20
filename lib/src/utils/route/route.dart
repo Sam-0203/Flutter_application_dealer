@@ -1,3 +1,5 @@
+import 'package:dealershub_/src/views/home/cars%20details/add_car_image.dart';
+import 'package:dealershub_/src/views/home/cars%20details/add_new_car.dart';
 import 'package:dealershub_/src/views/home/cars%20details/add_car_details.dart';
 import 'package:dealershub_/src/views/home/cars%20details/car_update.dart';
 import 'package:dealershub_/src/views/home/cars%20details/details_review.dart';
@@ -5,7 +7,7 @@ import 'package:dealershub_/src/views/home/cars%20details/my_fav.dart';
 import 'package:dealershub_/src/views/home/tabs/filter_screen.dart';
 import 'package:dealershub_/src/views/home/tabs/listofcars.dart';
 import 'package:dealershub_/src/views/home/tabs/myinvetory.dart';
-import 'package:dealershub_/src/views/home/cars%20details/newcarentry.dart';
+// import 'package:dealershub_/src/views/home/cars%20details/newcarentry.dart';
 import 'package:dealershub_/src/views/user/login.dart';
 import 'package:dealershub_/src/views/user/otp_screen.dart';
 import 'package:dealershub_/src/views/user/user_update.dart';
@@ -44,6 +46,7 @@ const String filteringScreen = 'FilteringScreen';
 const String carUpdateDetails = 'CarUpdateDetails';
 const String myFavoriteCarsRoute = 'MyFavoriteCars';
 const String myProfileUpdate = 'MyProfileUpdate';
+const String carImageUpload = 'carImageUpload';
 
 // On Boarding Screens.....
 final Map<String, Widget> onboardingPages = {
@@ -198,6 +201,11 @@ Route<dynamic> controller(RouteSettings settings) {
 
       return MaterialPageRoute(builder: (context) => NewCarDetails(role: role));
 
+    // case newCarEntryRoute:
+    //   final role = settings.arguments as String; // ← Directly cast to String
+
+    //   return MaterialPageRoute(builder: (context) => NewCarDetails(role: role));
+
     case carOptionalDetails:
       final args = settings.arguments as Map<String, dynamic>;
 
@@ -267,6 +275,17 @@ Route<dynamic> controller(RouteSettings settings) {
 
     case myProfileUpdate:
       return MaterialPageRoute(builder: (context) => const UserUpdate());
+
+    case carImageUpload:
+      final args = settings.arguments as Map<String, dynamic>;
+      final carDetails =
+          (args['carData'] as Map?)?.cast<String, dynamic>() ?? {};
+      final role = args['role'] as String? ?? '';
+
+      return MaterialPageRoute(
+        builder: (context) =>
+            CarImageUploadScreen(carDetails: carDetails, role: role),
+      );
     default:
       throw ('Page are not found');
   }

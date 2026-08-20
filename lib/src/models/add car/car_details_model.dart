@@ -24,7 +24,7 @@ class CarDetailsResponse {
         message: json["message"] ?? "",
         status: json["status"] ?? false,
         statusCode: json["status_code"] ?? 0,
-        data: DealerCarDetailsDatum.fromJson(json["data"]),
+        data: DealerCarDetailsDatum.fromJson(json["data"] ?? {}),
       );
 
   Map<String, dynamic> toJson() => {
@@ -39,14 +39,26 @@ class DealerCarDetailsDatum {
   Dealer dealer;
   int id;
   String status;
+  String registrationNumber;
+  String rcStatus;
+  DateTime? insuranceUpto;
+  String policyNumber;
+  String engineNumber;
+  String cubicCapacity;
+  String vehicleChasiNumber;
+  DateTime? registrationDate;
+  String financer;
+  bool financed;
+  DateTime? taxPaidUpto;
   Brand brand;
   Brand models;
   Brand variant;
-  Color color;
+  CarColor color;
   Brand fuelType;
   Brand transmission;
   String manufacturingYear;
   String kmRange;
+  Brand owner;
   Brand ownerType;
   Rto rto;
   OtherDetails? otherDetails;
@@ -54,13 +66,24 @@ class DealerCarDetailsDatum {
   List<CarImage> images;
   bool isFavorite;
 
-  // Backward compatibility for places that still access `model`.
+  // Backward compatibility
   Brand get model => models;
 
   DealerCarDetailsDatum({
     required this.dealer,
     required this.id,
     required this.status,
+    required this.registrationNumber,
+    required this.rcStatus,
+    required this.insuranceUpto,
+    required this.policyNumber,
+    required this.engineNumber,
+    required this.cubicCapacity,
+    required this.vehicleChasiNumber,
+    required this.registrationDate,
+    required this.financer,
+    required this.financed,
+    required this.taxPaidUpto,
     required this.brand,
     required this.models,
     required this.variant,
@@ -69,6 +92,7 @@ class DealerCarDetailsDatum {
     required this.transmission,
     required this.manufacturingYear,
     required this.kmRange,
+    required this.owner,
     required this.ownerType,
     required this.rto,
     this.otherDetails,
@@ -77,21 +101,38 @@ class DealerCarDetailsDatum {
     required this.isFavorite,
   });
 
+  static DateTime? _tryParseDate(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString());
+  }
+
   factory DealerCarDetailsDatum.fromJson(Map<String, dynamic> json) =>
       DealerCarDetailsDatum(
-        dealer: Dealer.fromJson(json["dealer"]),
-        id: json["id"],
+        dealer: Dealer.fromJson(json["dealer"] ?? {}),
+        id: json["id"] ?? 0,
         status: json["status"] ?? "",
-        brand: Brand.fromJson(json["brand"]),
-        models: Brand.fromJson(json["models"]),
-        variant: Brand.fromJson(json["variant"]),
-        color: Color.fromJson(json["color"]),
-        fuelType: Brand.fromJson(json["fuel_type"]),
-        transmission: Brand.fromJson(json["transmission"]),
+        registrationNumber: json["registration_number"] ?? "",
+        rcStatus: json["rc_status"] ?? "",
+        insuranceUpto: _tryParseDate(json["insurance_upto"]),
+        policyNumber: json["policy_number"] ?? "",
+        engineNumber: json["engine_number"] ?? "",
+        cubicCapacity: json["cubic_capacity"] ?? "",
+        vehicleChasiNumber: json["vehicle_chasi_number"] ?? "",
+        registrationDate: _tryParseDate(json["registration_date"]),
+        financer: json["financer"] ?? "",
+        financed: _asBool(json["financed"]),
+        taxPaidUpto: _tryParseDate(json["tax_paid_upto"]),
+        brand: Brand.fromJson(json["brand"] ?? {}),
+        models: Brand.fromJson(json["model"] ?? json["models"] ?? {}), // ← fix
+        variant: Brand.fromJson(json["variant"] ?? {}),
+        color: CarColor.fromJson(json["color"] ?? {}),
+        fuelType: Brand.fromJson(json["fuel_type"] ?? {}),
+        transmission: Brand.fromJson(json["transmission"] ?? {}),
         manufacturingYear: json["manufacturing_year"] ?? "",
         kmRange: json["km_range"] ?? "",
-        ownerType: Brand.fromJson(json["owner_type"]),
-        rto: Rto.fromJson(json["rto"]),
+        owner: Brand.fromJson(json["owner"] ?? {}),
+        ownerType: Brand.fromJson(json["owner_type"] ?? {}),
+        rto: Rto.fromJson(json["rto"] ?? {}),
         otherDetails: json["other_details"] == null
             ? null
             : OtherDetails.fromJson(json["other_details"]),
@@ -104,27 +145,47 @@ class DealerCarDetailsDatum {
         isFavorite: _asBool(json["is_favorite"]),
       );
 
+  static String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+    return "${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
   Map<String, dynamic> toJson() => {
+    "dealer": dealer.toJson(),
     "id": id,
     "status": status,
+    "registration_number": registrationNumber,
+    "rc_status": rcStatus,
+    "insurance_upto": _formatDate(insuranceUpto),
+    "policy_number": policyNumber,
+    "engine_number": engineNumber,
+    "cubic_capacity": cubicCapacity,
+    "vehicle_chasi_number": vehicleChasiNumber,
+    "registration_date": _formatDate(registrationDate),
+    "financer": financer,
+    "financed": financed,
+    "tax_paid_upto": _formatDate(taxPaidUpto),
     "brand": brand.toJson(),
-    "models": models.toJson(),
+    "model": models.toJson(),
     "variant": variant.toJson(),
     "color": color.toJson(),
     "fuel_type": fuelType.toJson(),
     "transmission": transmission.toJson(),
     "manufacturing_year": manufacturingYear,
     "km_range": kmRange,
+    "owner": owner.toJson(),
     "owner_type": ownerType.toJson(),
     "rto": rto.toJson(),
     "other_details": otherDetails?.toJson(),
     "features": features.toJson(),
     "images": List<dynamic>.from(images.map((x) => x.toJson())),
+    "is_favorite": isFavorite,
   };
 }
 
 class Dealer {
   int id;
+  String registrationNumber;
   String dealershipName;
   String state;
   String city;
@@ -134,6 +195,7 @@ class Dealer {
 
   Dealer({
     required this.id,
+    required this.registrationNumber,
     required this.dealershipName,
     required this.state,
     required this.city,
@@ -144,9 +206,10 @@ class Dealer {
 
   factory Dealer.fromJson(Map<String, dynamic> json) => Dealer(
     id: json["id"] ?? 0,
+    registrationNumber: json["registration_number"] ?? "",
     dealershipName: json["dealership_name"] ?? "",
     state: json["state"] ?? "",
-    city: json["city"]?.trim() ?? "", // trim extra space
+    city: json["city"]?.trim() ?? "",
     createdAt: json["created_at"],
     updatedAt: json["updated_at"],
     postedDate: json["posted_date"],
@@ -154,6 +217,7 @@ class Dealer {
 
   Map<String, dynamic> toJson() => {
     "id": id,
+    "registration_number": registrationNumber,
     "dealership_name": dealershipName,
     "state": state,
     "city": city,
@@ -203,14 +267,14 @@ class Brand {
   };
 }
 
-class Color {
+class CarColor {
   int id;
   String name;
   String colorCode;
 
-  Color({required this.id, required this.name, required this.colorCode});
+  CarColor({required this.id, required this.name, required this.colorCode});
 
-  factory Color.fromJson(Map<String, dynamic> json) => Color(
+  factory CarColor.fromJson(Map<String, dynamic> json) => CarColor(
     id: json["id"] ?? 0,
     name: json["name"] ?? "",
     colorCode: json["color_code"] ?? "",
@@ -291,12 +355,8 @@ class CarImage {
 
   factory CarImage.fromJson(Map<String, dynamic> json) => CarImage(
     id: json["id"] ?? 0,
-    // Prefer 'url' (full absolute URL) if available, otherwise use 'image_url' (relative path)
     imageUrl: json["url"] ?? json["image_url"] ?? "",
-    isPrimary:
-        json["is_primary"] == true ||
-        json["is_primary"] == 1 ||
-        json["is_primary"] == "true",
+    isPrimary: _asBool(json["is_primary"]),
   );
 
   Map<String, dynamic> toJson() => {
@@ -317,6 +377,8 @@ class Rto {
 
   Map<String, dynamic> toJson() => {"id": id, "code": code};
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 int? _asNullableInt(dynamic value) {
   if (value == null) return null;

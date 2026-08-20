@@ -251,26 +251,36 @@ class AgentProfileService {
 class LogoutService {
   Future<bool> logout() async {
     final token = await SecureStorage.getToken();
+
+    // No token — already logged out locally, just clear and return
+    if (token == null) {
+      await SecureStorage.clearAll();
+      return true;
+    }
+
     final uri = Uri.parse(ApiUrls.UserLoggedOut);
 
     try {
-      final response = await http.post(
-        uri,
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && data['status'] == true) {
-        return true; // ✅ success
-      } else {
-        return false;
-      }
+      // Always clear local storage regardless of API response
+      await SecureStorage.clearAll();
+
+      return response.statusCode == 200 && data['status'] == true;
     } catch (e) {
       debugPrint('Logout API error: $e');
+      // Still clear local data so user isn't stuck
+      await SecureStorage.clearAll();
       return false;
     }
   }

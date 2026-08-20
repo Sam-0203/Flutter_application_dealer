@@ -45,6 +45,17 @@ class ListOfCarsDatum {
   Dealer dealer;
   int id;
   String status;
+  String registrationNumber;
+  String rcStatus;
+  DateTime? insuranceUpto;
+  String policyNumber;
+  String engineNumber;
+  String cubicCapacity;
+  String vehicleChasiNumber;
+  DateTime? registrationDate;
+  String financer;
+  bool financed;
+  DateTime? taxPaidUpto;
   Brand brand;
   Brand model;
   Brand variant;
@@ -53,6 +64,7 @@ class ListOfCarsDatum {
   Brand transmission;
   String manufacturingYear;
   String kmRange;
+  Brand owner;
   Brand ownerType;
   Rto rto;
   OtherDetails? otherDetails;
@@ -64,6 +76,17 @@ class ListOfCarsDatum {
     required this.dealer,
     required this.id,
     required this.status,
+    required this.registrationNumber,
+    required this.rcStatus,
+    required this.insuranceUpto,
+    required this.policyNumber,
+    required this.engineNumber,
+    required this.cubicCapacity,
+    required this.vehicleChasiNumber,
+    required this.registrationDate,
+    required this.financer,
+    required this.financed,
+    required this.taxPaidUpto,
     required this.brand,
     required this.model,
     required this.variant,
@@ -72,6 +95,7 @@ class ListOfCarsDatum {
     required this.transmission,
     required this.manufacturingYear,
     required this.kmRange,
+    required this.owner,
     required this.ownerType,
     required this.rto,
     required this.otherDetails,
@@ -79,6 +103,11 @@ class ListOfCarsDatum {
     required this.images,
     required this.isFavorite,
   });
+
+  static DateTime? _tryParseDate(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString());
+  }
 
   factory ListOfCarsDatum.fromJson(Map<String, dynamic> json) {
     final dealerJson = Map<String, dynamic>.from(_asMap(json["dealer"]));
@@ -88,6 +117,17 @@ class ListOfCarsDatum {
       dealer: Dealer.fromJson(dealerJson),
       id: _asInt(json["id"]),
       status: _asString(json["status"]),
+      registrationNumber: _asString(json["registration_number"]),
+      rcStatus: _asString(json["rc_status"]),
+      insuranceUpto: _tryParseDate(json["insurance_upto"]),
+      policyNumber: _asString(json["policy_number"]),
+      engineNumber: _asString(json["engine_number"]),
+      cubicCapacity: _asString(json["cubic_capacity"]),
+      vehicleChasiNumber: _asString(json["vehicle_chasi_number"]),
+      registrationDate: _tryParseDate(json["registration_date"]),
+      financer: _asString(json["financer"]),
+      financed: _asBool(json["financed"]),
+      taxPaidUpto: _tryParseDate(json["tax_paid_upto"]),
       brand: Brand.fromJson(_asMap(json["brand"])),
       model: Brand.fromJson(_asMap(json["model"])),
       variant: Brand.fromJson(_asMap(json["variant"])),
@@ -96,6 +136,7 @@ class ListOfCarsDatum {
       transmission: Brand.fromJson(_asMap(json["transmission"])),
       manufacturingYear: _asString(json["manufacturing_year"]),
       kmRange: _asString(json["km_range"]),
+      owner: Brand.fromJson(_asMap(json["owner"])),
       ownerType: Brand.fromJson(_asMap(json["owner_type"])),
       rto: Rto.fromJson(_asMap(json["rto"])),
       otherDetails: json["other_details"] == null
@@ -109,9 +150,25 @@ class ListOfCarsDatum {
     );
   }
 
+  static String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+    return "${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
   Map<String, dynamic> toJson() => {
     "id": id,
     "status": status,
+    "registration_number": registrationNumber,
+    "rc_status": rcStatus,
+    "insurance_upto": _formatDate(insuranceUpto),
+    "policy_number": policyNumber,
+    "engine_number": engineNumber,
+    "cubic_capacity": cubicCapacity,
+    "vehicle_chasi_number": vehicleChasiNumber,
+    "registration_date": _formatDate(registrationDate),
+    "financer": financer,
+    "financed": financed,
+    "tax_paid_upto": _formatDate(taxPaidUpto),
     "brand": brand.toJson(),
     "model": model.toJson(),
     "variant": variant.toJson(),
@@ -120,6 +177,7 @@ class ListOfCarsDatum {
     "transmission": transmission.toJson(),
     "manufacturing_year": manufacturingYear,
     "km_range": kmRange,
+    "owner": owner.toJson(),
     "owner_type": ownerType.toJson(),
     "rto": rto.toJson(),
     "other_details": otherDetails?.toJson(),
@@ -132,6 +190,7 @@ class ListOfCarsDatum {
 class Dealer {
   int id;
   String dealershipName;
+  String registrationNumber;
   String state;
   String city;
   String carPostDate;
@@ -142,6 +201,7 @@ class Dealer {
     required this.state,
     required this.city,
     required this.carPostDate,
+    required this.registrationNumber,
   });
 
   factory Dealer.fromJson(Map<String, dynamic> json) => Dealer(
@@ -162,6 +222,7 @@ class Dealer {
       json["created_on"],
       json["createdOn"],
     ]),
+    registrationNumber: _asString(json["registration_number"]),
   );
 
   Map<String, dynamic> toJson() => {
@@ -170,6 +231,7 @@ class Dealer {
     "state": state,
     "city": city,
     "car_post_date": carPostDate,
+    "registration_number": registrationNumber,
   };
 }
 

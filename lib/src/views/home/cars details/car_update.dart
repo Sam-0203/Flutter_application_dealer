@@ -159,6 +159,10 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
         content: Text(message),
         duration: const Duration(seconds: 2),
         backgroundColor: const Color(0xffF47B39),
+        behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -221,9 +225,16 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
     if (_remainingImageSlots <= 0) {
       if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Maximum 10 images allowed per car'),
             duration: Duration(seconds: 2),
+            backgroundColor: Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -580,9 +591,16 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
     if (slotsBeforePick <= 0) {
       if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Maximum 10 images allowed per car'),
             duration: Duration(seconds: 2),
+            backgroundColor: Color(0xffF47B39),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -630,6 +648,13 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                 'Only $validCount image(s) added. Maximum $_maxCarImages images allowed per car.',
               ),
               duration: const Duration(seconds: 2),
+              backgroundColor: Color(0xffF47B39),
+              behavior: SnackBarBehavior.floating,
+              showCloseIcon: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(50),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
@@ -643,6 +668,13 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                 'HEIC/HEIF are also supported. No GIF, videos, or other formats.',
               ),
               duration: const Duration(seconds: 3),
+              backgroundColor: Color(0xffF47B39),
+              behavior: SnackBarBehavior.floating,
+              showCloseIcon: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(50),
+              ),
+              margin: const EdgeInsets.all(16),
             ),
           );
         }
@@ -661,9 +693,16 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
           if (!_isValidImageFile(pickedFile.path)) {
             if (mounted && context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text('❌ Invalid file format. Only images allowed.'),
                   duration: Duration(seconds: 2),
+                  backgroundColor: Color(0xffF47B39),
+                  behavior: SnackBarBehavior.floating,
+                  showCloseIcon: true,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  margin: const EdgeInsets.all(16),
                 ),
               );
             }
@@ -878,8 +917,16 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                                   .fetchedSingleCardetails(widget.carId);
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text("✅ Image deleted successfully"),
+                                  backgroundColor: Color(0xffF47B39),
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  showCloseIcon: true,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  margin: const EdgeInsets.all(16),
                                 ),
                               );
                             } else {
@@ -888,6 +935,14 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                                   content: Text(
                                     "❌ Failed to delete image: ${deleteVM.error}",
                                   ),
+                                  backgroundColor: Color(0xffF47B39),
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  showCloseIcon: true,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  margin: const EdgeInsets.all(16),
                                 ),
                               );
                             }
@@ -1068,8 +1123,16 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                               onPressed: () async {
                                 if (carImages.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text('No images to upload.'),
+                                      backgroundColor: Color(0xffF47B39),
+                                      duration: const Duration(seconds: 2),
+                                      behavior: SnackBarBehavior.floating,
+                                      showCloseIcon: true,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(50),
+                                      ),
+                                      margin: const EdgeInsets.all(16),
                                     ),
                                   );
                                   return;
@@ -1079,10 +1142,18 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                                         carImages.length >
                                     _maxCarImages) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                    SnackBar(
                                       content: Text(
                                         'Maximum 10 images allowed per car',
                                       ),
+                                      backgroundColor: Color(0xffF47B39),
+                                      duration: const Duration(seconds: 2),
+                                      behavior: SnackBarBehavior.floating,
+                                      showCloseIcon: true,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(50),
+                                      ),
+                                      margin: const EdgeInsets.all(16),
                                     ),
                                   );
                                   return;
@@ -1192,21 +1263,21 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                                                 backgroundColor: const Color(
                                                   0xFF2DBE60,
                                                 ),
-                                                duration: const Duration(
-                                                  seconds: 3,
-                                                ),
+
                                                 behavior:
                                                     SnackBarBehavior.floating,
-                                                margin:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 12,
-                                                    ),
+
+                                                elevation: 6,
+                                                duration: Duration(seconds: 2),
+
+                                                showCloseIcon: true,
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(12),
+                                                      BorderRadius.circular(50),
                                                 ),
-                                                elevation: 6,
+                                                margin: const EdgeInsets.all(
+                                                  16,
+                                                ),
                                               ),
                                             );
                                           }
@@ -1428,8 +1499,16 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
         if (carImages.isNotEmpty) {
           if (_existingServerImageCount + carImages.length > _maxCarImages) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
+              SnackBar(
                 content: Text("Maximum 10 images allowed per car"),
+                backgroundColor: Color(0xffF47B39),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                showCloseIcon: true,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                margin: const EdgeInsets.all(16),
               ),
             );
             return;
@@ -1450,19 +1529,47 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
                 .read<SingleCarDetailsViewModel>()
                 .fetchedSingleCardetails(widget.carId);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("✅ Images uploaded successfully")),
+              SnackBar(
+                content: Text("✅ Images uploaded successfully"),
+                backgroundColor: Color(0xffF47B39),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                showCloseIcon: true,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                margin: const EdgeInsets.all(16),
+              ),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text("❌ Image upload failed: ${imageVM.errorMessage}"),
+                backgroundColor: Color(0xffF47B39),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                showCloseIcon: true,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                margin: const EdgeInsets.all(16),
               ),
             );
           }
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Features updated successfully")),
+          SnackBar(
+            content: Text("✅ Features updated successfully"),
+            backgroundColor: Color(0xffF47B39),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
         );
 
         // Navigate back to home screen after successful update
@@ -1478,16 +1585,36 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
         debugPrint("❌ Update failed: $_updateError");
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ car Update failed: $_updateError")),
+          SnackBar(
+            content: Text("❌ car Update failed: $_updateError"),
+            backgroundColor: Color(0xffF47B39),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(50),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
         );
       }
     } catch (e) {
       setState(() {
         _updateError = ErrorMessageHelper.userMessage(e);
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("❌ Update failed: $_updateError")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❌ Update failed: $_updateError"),
+          backgroundColor: Color(0xffF47B39),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(50),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
       debugPrint("❌ Update failed: $_updateError");
     } finally {
       if (mounted) {
@@ -1823,61 +1950,60 @@ class _CarUpdateDetailsState extends State<CarUpdateDetails> {
               ),
 
               // Feature Sections
-              _infoCard(
-                title: 'Safety Features',
-                children: buildFeatureSection(_selectedSafety),
-                featureCount: _selectedSafety.length,
-                onTap: () => _showFeaturesBottomSheet(
-                  'Safety Features',
-                  _selectedSafety,
-                  'safety',
-                ),
-              ),
+              // _infoCard(
+              //   title: 'Safety Features',
+              //   children: buildFeatureSection(_selectedSafety),
+              //   featureCount: _selectedSafety.length,
+              //   onTap: () => _showFeaturesBottomSheet(
+              //     'Safety Features',
+              //     _selectedSafety,
+              //     'safety',
+              //   ),
+              // ),
 
-              _infoCard(
-                title: 'Comfort & Convenience',
-                children: buildFeatureSection(_selectedComfort),
-                featureCount: _selectedComfort.length,
-                onTap: () => _showFeaturesBottomSheet(
-                  'Comfort & Convenience',
-                  _selectedComfort,
-                  'comfort',
-                ),
-              ),
+              // _infoCard(
+              //   title: 'Comfort & Convenience',
+              //   children: buildFeatureSection(_selectedComfort),
+              //   featureCount: _selectedComfort.length,
+              //   onTap: () => _showFeaturesBottomSheet(
+              //     'Comfort & Convenience',
+              //     _selectedComfort,
+              //     'comfort',
+              //   ),
+              // ),
 
-              _infoCard(
-                title: 'Infotainment & Connectivity',
-                children: buildFeatureSection(_selectedInfotainment),
-                featureCount: _selectedInfotainment.length,
-                onTap: () => _showFeaturesBottomSheet(
-                  'Infotainment & Connectivity',
-                  _selectedInfotainment,
-                  'infotainment',
-                ),
-              ),
+              // _infoCard(
+              //   title: 'Infotainment & Connectivity',
+              //   children: buildFeatureSection(_selectedInfotainment),
+              //   featureCount: _selectedInfotainment.length,
+              //   onTap: () => _showFeaturesBottomSheet(
+              //     'Infotainment & Connectivity',
+              //     _selectedInfotainment,
+              //     'infotainment',
+              //   ),
+              // ),
 
-              _infoCard(
-                title: 'Interior Features',
-                children: buildFeatureSection(_selectedInterior),
-                featureCount: _selectedInterior.length,
-                onTap: () => _showFeaturesBottomSheet(
-                  'Interior Features',
-                  _selectedInterior,
-                  'interior',
-                ),
-              ),
+              // _infoCard(
+              //   title: 'Interior Features',
+              //   children: buildFeatureSection(_selectedInterior),
+              //   featureCount: _selectedInterior.length,
+              //   onTap: () => _showFeaturesBottomSheet(
+              //     'Interior Features',
+              //     _selectedInterior,
+              //     'interior',
+              //   ),
+              // ),
 
-              _infoCard(
-                title: 'Exterior Features',
-                children: buildFeatureSection(_selectedExterior),
-                featureCount: _selectedExterior.length,
-                onTap: () => _showFeaturesBottomSheet(
-                  'Exterior Features',
-                  _selectedExterior,
-                  'exterior',
-                ),
-              ),
-
+              // _infoCard(
+              //   title: 'Exterior Features',
+              //   children: buildFeatureSection(_selectedExterior),
+              //   featureCount: _selectedExterior.length,
+              //   onTap: () => _showFeaturesBottomSheet(
+              //     'Exterior Features',
+              //     _selectedExterior,
+              //     'exterior',
+              //   ),
+              // ),
               _infoCard(
                 children: [
                   Row(

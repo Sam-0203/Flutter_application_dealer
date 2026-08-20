@@ -15,6 +15,8 @@ class UserInputField extends StatefulWidget {
   final FocusNode focusNode;
   final List<TextInputFormatter>? inputFormatters;
   final EdgeInsets scrollPadding;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   const UserInputField({
     super.key,
@@ -30,6 +32,8 @@ class UserInputField extends StatefulWidget {
     required this.focusNode,
     this.inputFormatters = const [],
     this.scrollPadding = const EdgeInsets.all(20),
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   @override
@@ -99,8 +103,11 @@ class _UserInputFieldState extends State<UserInputField> {
         fontWeight: FontWeight.w600,
         color: const Color.fromRGBO(59, 59, 59, 1),
       ),
-      textInputAction: TextInputAction.done,
-      onEditingComplete: _closeKeyboard,
+      textInputAction: widget.textInputAction ?? TextInputAction.done,
+      onSubmitted: (value) {
+        widget.onSubmitted?.call(value);
+        _closeKeyboard();
+      },
       focusNode: widget.focusNode,
       inputFormatters: widget.onlyDigits
           ? [

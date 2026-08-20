@@ -1,6 +1,7 @@
 class ApiUrls {
-  // static const String baseURl = 'http://192.168.0.169:5000'; //local server
-  static const String baseURl = 'http://13.204.62.17'; // server
+  // static const String baseURl = 'http://192.168.0.36:8002'; //local server
+  // static const String baseURl = 'http://127.0.0.1:8002'; //local server
+  static const String baseURl = 'http://16.113.9.204'; // server
   static const String register =
       '$baseURl/send_otp'; //user registration and login
   static const String verifyOTP = '$baseURl/login'; //verify otp
@@ -9,7 +10,7 @@ class ApiUrls {
   static const String states = '$baseURl/api/states'; //get states
   static const String cities = '$baseURl/api/cities?state_id='; //get cities
 
-  // Add a new car API's : ====>
+  // Add a new car API's : ====> KL08AT5304-540k-170k,
   static const String carCompany =
       '$baseURl/api/master/car-brands'; // GET car companies
   static const String carModels =
@@ -95,4 +96,7 @@ class ApiUrls {
 
   static const String UserLoggedOut =
       '$baseURl/logout'; // POST user logout based on token
+
+  static const String rc_details =
+      '$baseURl/api/cars/rc-details'; // POST rc search
 }

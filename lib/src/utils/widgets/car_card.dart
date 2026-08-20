@@ -153,13 +153,13 @@ class Car {
   final String image;
   final String fuel;
   final String year;
-  final String kms;
+  final String? kms;
   final String owner;
   final String reg;
   final String dealer;
   final String city;
   final String state;
-  final String carPostDate;
+  final String? carPostDate;
 
   const Car({
     required this.id,
@@ -167,13 +167,13 @@ class Car {
     required this.image,
     required this.fuel,
     required this.year,
-    required this.kms,
+    this.kms,
     required this.owner,
     required this.reg,
     required this.dealer,
     required this.city,
     required this.state,
-    required this.carPostDate,
+    this.carPostDate,
   });
 }
 
@@ -259,10 +259,13 @@ class CarCard extends StatelessWidget {
                 children: [
                   _chip(context, car.fuel, effectiveChipSize, isFuelChip: true),
                   _chip(context, car.year, effectiveChipSize),
-                  _chip(context, car.kms, effectiveChipSize),
+                  if (car.kms != null &&
+                      car.kms!.trim().isNotEmpty &&
+                      car.kms!.trim() != '0')
+                    _chip(context, car.kms!, effectiveChipSize),
                   _chip(context, car.owner, effectiveChipSize),
                   _chip(context, car.reg, effectiveChipSize),
-                  _chip(context, car.carPostDate, effectiveChipSize),
+                  // _chip(context, car.carPostDate, effectiveChipSize),
                 ],
               ),
               SizedBox(height: effectiveSpacing),

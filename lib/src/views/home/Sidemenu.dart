@@ -107,15 +107,19 @@ class _SideBarMenuState extends State<SideBarMenu> {
                                     ),
                                     SizedBox(width: 8),
                                     // 🔥 ADD THIS
-                                    _buildRoleBadge('Dealer'),
+                                    // _buildRoleBadge('Dealer'),
+                                    if (data?.isVerified == true) ...[
+                                      _buildRoleBadge(),
+                                    ],
                                   ],
                                 ),
 
                                 Text(
-                                  data?.mobile ?? '',
+                                  data?.mobile ?? 'xxxxx xxxxx',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.white70,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
 
@@ -125,6 +129,7 @@ class _SideBarMenuState extends State<SideBarMenu> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.white70,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
@@ -199,7 +204,10 @@ class _SideBarMenuState extends State<SideBarMenu> {
                                     ),
                                     SizedBox(width: 8),
                                     // 🔥 ADD THIS
-                                    _buildRoleBadge('Agent'),
+                                    // _buildRoleBadge('Agent'),
+                                    if (data?.isVerified == true) ...[
+                                      _buildRoleBadge(),
+                                    ],
                                   ],
                                 ),
 
@@ -208,6 +216,7 @@ class _SideBarMenuState extends State<SideBarMenu> {
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.white70,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 Expanded(
@@ -216,6 +225,7 @@ class _SideBarMenuState extends State<SideBarMenu> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.white70,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
@@ -247,17 +257,204 @@ class _SideBarMenuState extends State<SideBarMenu> {
 
           // 🔴 Logout at bottoms
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: Text('Logout', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              context.read<LogoutViewModel>().logout();
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                OnBoardingscreen5,
-                (route) => false,
-              );
-            },
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  barrierColor: Colors.black54,
+                  builder: (ctx) => Dialog(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Avatar row
+                          Row(
+                            children: [
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFFEF0E7),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.person_rounded,
+                                      size: 26,
+                                      color: Color(0xffF47B39),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      width: 18,
+                                      height: 18,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xffF47B39),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 10,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 14),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Log out of DealersHub?',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Your session will end.',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Info box
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 18,
+                                  color: Color(0xffF47B39),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    "You'll be redirected to the sign-in screen. Your favourites and data will be saved.",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                      height: 1.55,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+
+                          // Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 13,
+                                    ),
+                                    side: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    foregroundColor: Colors.grey.shade600,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text(
+                                    'Cancel',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xffF47B39),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 13,
+                                    ),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: const Text(
+                                    'Log out',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+
+                if (confirmed == true) {
+                  final success = await context
+                      .read<LogoutViewModel>()
+                      .logout();
+
+                  if (!mounted) return;
+
+                  if (success) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      OnBoardingscreen5,
+                      (route) => false,
+                    );
+                  } else {
+                    // API failed but local cleared — still navigate out
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      OnBoardingscreen5,
+                      (route) => false,
+                    );
+                  }
+                }
+              },
+            ),
           ),
           const SizedBox(height: 10),
         ],
@@ -266,22 +463,30 @@ class _SideBarMenuState extends State<SideBarMenu> {
   }
 }
 
-Widget _buildRoleBadge(String role) {
-  return Container(
-    margin: const EdgeInsets.only(top: 6),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.2),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      role.toUpperCase(),
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
-        letterSpacing: 1,
-      ),
-    ),
+// Widget _buildRoleBadge(String role) {
+//   return Container(
+//     margin: const EdgeInsets.only(top: 6),
+//     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+//     decoration: BoxDecoration(
+//       color: Colors.white.withOpacity(0.2),
+//       borderRadius: BorderRadius.circular(20),
+//     ),
+//     child: Text(
+//       role.toUpperCase(),
+//       style: TextStyle(
+//         fontSize: 12,
+//         fontWeight: FontWeight.w600,
+//         color: Colors.white,
+//         letterSpacing: 1,
+//       ),
+//     ),
+//   );
+// }
+
+Widget _buildRoleBadge() {
+  return const Icon(
+    Icons.verified,
+    color: Colors.white, // Blue verified badge
+    size: 20,
   );
 }

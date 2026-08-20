@@ -51,3 +51,4 @@ class CarCardShimmer extends StatelessWidget {
     );
   }
 }
+

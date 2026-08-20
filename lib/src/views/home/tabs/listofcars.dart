@@ -152,9 +152,53 @@ class _ListofcarsState extends State<Listofcars> {
 
     if (vm.isLoading) {
       return ListView.builder(
-        itemCount: 5,
+        itemCount: 3,
         itemBuilder: (context, index) => const CarCardShimmer(),
       );
+    }
+
+    if (vm.listOfCars.isEmpty) {
+      if (isMobile) {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.directions_car_outlined, size: 80, color: Colors.grey),
+              SizedBox(height: 12),
+              Text(
+                'No Cars Found',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.directions_car_outlined,
+                size: 100,
+                color: Colors.grey,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'No Cars Found',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
     }
 
     final cars = vm.listOfCars;
@@ -179,13 +223,17 @@ class _ListofcarsState extends State<Listofcars> {
               key: ValueKey(car.id),
               car: Car(
                 id: car.id,
-                title:
-                    "${car.brand.name} ${car.model.name} ${car.variant.name}",
+                title: "${car.model.name}",
                 image: car.images.isNotEmpty ? car.images.first.imageUrl : "",
                 fuel: car.fuelType.name,
                 year: car.manufacturingYear.toString(),
-                kms: car.kmRange,
-                owner: car.ownerType.name,
+                kms:
+                    (car.kmRange == null ||
+                        car.kmRange.trim().isEmpty ||
+                        car.kmRange == "0")
+                    ? ""
+                    : "${car.kmRange} km",
+                owner: car.owner.name,
                 reg: car.rto.code,
                 dealer: car.dealer.dealershipName,
                 city: car.dealer.city,
@@ -258,7 +306,12 @@ class _ListofcarsState extends State<Listofcars> {
                 image: car.images.isNotEmpty ? car.images.first.imageUrl : "",
                 fuel: car.fuelType.name,
                 year: car.manufacturingYear.toString(),
-                kms: car.kmRange,
+                kms:
+                    (car.kmRange == null ||
+                        car.kmRange.trim().isEmpty ||
+                        car.kmRange == "0")
+                    ? ""
+                    : "${car.kmRange} km",
                 owner: car.ownerType.name,
                 reg: car.rto.code,
                 dealer: car.dealer.dealershipName,
@@ -307,7 +360,12 @@ class _ListofcarsState extends State<Listofcars> {
                 images: car.images.map((e) => e.imageUrl).take(2).toList(),
                 fuel: car.fuelType.name,
                 year: car.manufacturingYear.toString(),
-                kms: car.kmRange,
+                kms:
+                    (car.kmRange == null ||
+                        car.kmRange.trim().isEmpty ||
+                        car.kmRange == "0")
+                    ? ""
+                    : "${car.kmRange} km",
                 owner: car.ownerType.name,
                 reg: car.rto.code,
                 dealer: car.dealer.dealershipName,
